@@ -8,5 +8,22 @@ Fusion of data from multiple sensors plays a pivotal role for improving the perf
 
 ## Requirements
 
+Before starting, we will need the following software installed:
+
+- Python
+- Anaconda
+
+We can create a new environment for replicating the experiments, using the given `nas_dsf_env.yml` file:
+
+```
+conda env create -f nas_dsf_env.yml
+```
+
+Then we can activate the environment using:
+
+```
+conda activate nas_dsf
+```
+
 
 ## FLIR-Aligned Experiments
