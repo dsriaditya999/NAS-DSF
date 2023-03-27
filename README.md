@@ -27,3 +27,36 @@ conda activate nas_dsf
 
 
 ## FLIR-Aligned Experiments
+
+### Checkpoints
+
+Download the pretrained model files of the backbone and head networks from the [link](https://drive.google.com/drive/folders/1S_hfku6aX1Bqmid8O1arLh4JvXWVzHsE?usp=sharing). Place the `checkpoints` folder as follows:
+
+```
+├── NAS-DSF
+│   ├── checkpoints
+│   ├── models
+```
+
+### Search Phase
+
+To run the search phase experiments, do the following:
+
+```shell
+$ python main_darts_searchable_flira.py <dir of FLIR-Aligned Dataset> --batchsize=8 --epochs=10 --wandb
+```
+
+### Train Phase
+
+To run the train phase experiments, do the following:
+
+```shell
+$ python main_darts_found_flira.py <dir of FLIR-Aligned Dataset> --search_exp_dir=<dir of search exp> --epochs=50 --batchsize=8
+```
+
+
+
+
+
+
+
