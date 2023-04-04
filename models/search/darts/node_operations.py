@@ -148,14 +148,17 @@ class ECAAttn(nn.Module):
 
         self.spatial_attention_block = spatial_attention_block()
 
+        self.relu = nn.ReLU()
+
     def forward(self,x,y):
 
         comb_in = torch.cat((x, y), dim=1)
 
         x_out = self.channel_attention_block(comb_in)
         x_out_1 = self.spatial_attention_block(x_out)
+        x_out_2 = self.relu(x_out_1)
 
-        return x_out_1
+        return x_out_2
 
 #######################################################################################################
 ################################### ShuffleAttn Block #################################################
@@ -179,6 +182,7 @@ class ShuffleAttn(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.gn = nn.GroupNorm(self.C // (2 * groups), self.C // (2 * groups))
         self.combine = nn.Conv2d(self.C, int(self.C/2), kernel_size=1)
+        self.relu = nn.ReLU()
         
 
     @staticmethod
@@ -222,8 +226,12 @@ class ShuffleAttn(nn.Module):
 
         # Reduce the Channels
         out = self.combine(out)
+
+        # Activation
+
+        out2 = self.relu(out)
         
-        return out
+        return out2
     
 
 class ConcatConv(nn.Module):
@@ -231,12 +239,18 @@ class ConcatConv(nn.Module):
         super().__init__()
         # 1x1 conv1d
         self.conv = nn.Conv2d(2*C, C, kernel_size=1)
+        self.relu = nn.ReLU()
 
     def forward(self, x, y):
         # concat on channels
         out = torch.cat([x, y], dim=1)
         out = self.conv(out)
-        return out
+
+        # Activation
+
+        out2 = self.relu(out)
+        
+        return out2
 
 
 class NodeMixedOp(nn.Module):

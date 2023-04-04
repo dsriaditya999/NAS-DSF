@@ -189,11 +189,23 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
                 genotype = training_bench.module.model.genotype()
             else:
-                num_params = 0
+                fusion_net_params = 0
                 for i in range(training_bench.model.fusion_levels):
-                    num_params += count_parameters(training_bench.model.fusion_nets[i])
+                    fusion_net_params += count_parameters(training_bench.model.fusion_nets[i])
 
-                logger.info("Fusion Nets Params: {}".format(num_params) )
+                full_backbone_params = count_parameters(training_bench.model.full_backbone)
+                head_net_params = count_parameters(training_bench.model.head_net)
+                full_params = count_parameters(training_bench.model)
+
+                # total_params = sum(p.numel() for p in training_bench.model.parameters())
+                # total_trainable_params = sum(p.numel() for p in training_bench.model.parameters() if p.requires_grad)
+
+                print("*"*50)
+                logger.info("Full Backbone Params : {}".format(full_backbone_params) )
+                logger.info("Head Network Params : {}".format(head_net_params) )
+                logger.info("Fusion Nets Params : {}".format(fusion_net_params) )
+                logger.info("Total Model Parameters : {}".format(full_params) )
+                print("*"*50)
 
                 genotype = training_bench.model.genotype()
 
