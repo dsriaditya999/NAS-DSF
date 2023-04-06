@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument('--multiplier', type=int, help='cell output concat', default=2)
     parser.add_argument('--steps', type=int, help='cell steps', default=2)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
-    parser.add_argument('--node_steps', type=int, help='inner node steps', default=1)
+    parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
 
     # number of classes    
