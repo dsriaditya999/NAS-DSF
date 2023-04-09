@@ -10,7 +10,7 @@ from .genotypes import *
 from .model_search import FusionMixedOp
 
 class NodeCell(nn.Module):
-    def __init__(self, node_steps, node_multiplier, args):
+    def __init__(self,L, node_steps, node_multiplier, args):
         super().__init__()
         
         self.args = args
@@ -22,7 +22,7 @@ class NodeCell(nn.Module):
         self.node_ops = nn.ModuleList()
         
         self.C = args.C
-        # self.L = args.L
+        self.L = L
         
         self.num_input_nodes = 2
         # self.num_keep_edges = 2
@@ -33,17 +33,17 @@ class NodeCell(nn.Module):
                 self.edge_ops.append(edge_op)
                 
         for i in range(self.node_steps):
-            node_op = NodeMixedOp(self.C, self.args)
+            node_op = NodeMixedOp(self.C,self.L, self.args)
             self.node_ops.append(node_op)
 
         if self.node_multiplier != 1:
-            self.out_conv = nn.Conv2d(self.C * self.node_multiplier, self.C, kernel_size=1)
-            self.bn = nn.BatchNorm2d(self.C)
+            self.out_conv = nn.Conv1d(self.C * self.node_multiplier, self.C, 1, 1)
+            self.bn = nn.BatchNorm1d(self.C)
             self.out_dropout = nn.Dropout(args.drpt)
 
         # skip v3 and v4
-        self.bn2 = nn.BatchNorm2d(self.C)
-        # self.dropout = nn.Dropout(args.drpt)
+        self.ln = nn.LayerNorm([self.C, self.L])
+        self.dropout = nn.Dropout(args.drpt)
 
     def forward(self, x, y, edge_weights, node_weights):
         states = [x, y]
@@ -60,22 +60,24 @@ class NodeCell(nn.Module):
         if self.node_multiplier != 1:
             out = self.out_conv(out)
             out = self.bn(out)
+            # out = F.relu(out)
             out = self.out_dropout(out)
         
         # skip v4
         out += x
-        out = self.bn2(out)
+        out = self.ln(out)
         
         return out
 
 class FusionNode(nn.Module):
     
-    def __init__(self, node_steps, node_multiplier, args):
+    def __init__(self,L, node_steps, node_multiplier, args):
         super().__init__()
         # self.logger = logger
         self.node_steps = node_steps
         self.node_multiplier = node_multiplier
-        self.node_cell = NodeCell(node_steps, node_multiplier, args)
+        self.L = L
+        self.node_cell = NodeCell(self.L, node_steps, node_multiplier, args)
 
         self.num_input_nodes = 2
         self.num_keep_edges = 2

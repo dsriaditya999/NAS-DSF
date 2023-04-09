@@ -122,19 +122,24 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         self.multiplier = args.multiplier
         self.steps = args.steps
+        self.args = args
         self.parallel = args.parallel
         self.fusion_levels = args.fusion_levels
 
         self.num_input_nodes = args.num_input_nodes
         self.num_keep_edges = args.num_keep_edges
 
-        # self._criterion = criterion
+        self.L = [96, 48, 24, 12, 6]
+
+        self.rgb_input_reshape_layers = self.create_input_reshape_layers()
+        self.thermal_input_reshape_layers = self.create_input_reshape_layers()
+        self.output_reshape_layers = self.create_output_reshape_layers()
 
         self.fusion_nets = []
 
         for i in range(self.fusion_levels):
 
-            self.fusion_nets.append(FusionNetwork( steps=self.steps, multiplier=self.multiplier, 
+            self.fusion_nets.append(FusionNetwork(self.L[i],steps=self.steps, multiplier=self.multiplier, 
                                          num_input_nodes=self.num_input_nodes, num_keep_edges=self.num_keep_edges,
                                          args=args))
 
@@ -142,6 +147,25 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         self.head_net = NAS_Head_Net(args.num_classes)
         self.head_net =self.head_net.to(device)
+
+    def create_input_reshape_layers(self):
+        
+        input_reshape_layers = nn.ModuleList()
+        for i in range(len(self.L)):
+            temp = nn.ModuleList()
+            for j in range(self.fusion_levels):
+                temp.append(ReshapeInputLayer(self.L[j],self.args))
+            input_reshape_layers.append(temp)
+    
+        return input_reshape_layers
+
+    def create_output_reshape_layers(self):
+        output_reshape_layers = nn.ModuleList()
+
+        for j in range(self.fusion_levels):
+            output_reshape_layers.append(ReshapeOutputLayer(self.L[j],self.args))
+    
+        return output_reshape_layers
 
 
     def forward(self,inputs):
@@ -155,10 +179,11 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         for i in range(self.fusion_levels):
             fusion_level_inputs["Level-"+str(i)] =  []
-            fusion_level_inputs["Level-"+str(i)] += [item[i] for item in thermal_list[1:]] 
-            fusion_level_inputs["Level-"+str(i)] += [item[i] for item in rgb_list[1:]]
+            fusion_level_inputs["Level-"+str(i)] += [self.thermal_input_reshape_layers[j][i](thermal_list[1:][j][i]) for j in range(len(thermal_list[1:]))]
+            fusion_level_inputs["Level-"+str(i)] += [self.rgb_input_reshape_layers[j][i](rgb_list[1:][j][i]) for j in range(len(rgb_list[1:]))]
 
-            out.append(self.fusion_nets[i](fusion_level_inputs["Level-"+str(i)]))
+            out.append(self.output_reshape_layers[i](self.fusion_nets[i](fusion_level_inputs["Level-"+str(i)])))
+
 
         x_class, x_box = self.head_net(out)
 
@@ -181,7 +206,9 @@ class Searchable_Att_Fusion_Net(nn.Module):
         for i in range(self.fusion_levels):
             central_parameters.append({'params':self.fusion_nets[i].parameters()})
 
-        central_parameters.append({'params':self.head_net.parameters()})
+        central_parameters.append({'params':self.rgb_input_reshape_layers.parameters()})
+        central_parameters.append({'params':self.thermal_input_reshape_layers.parameters()})
+        central_parameters.append({'params':self.output_reshape_layers.parameters()})
 
         return central_parameters
 
@@ -222,8 +249,6 @@ class Found_Att_Fusion_Net(nn.Module):
         self.num_input_nodes = args.num_input_nodes
         self.num_keep_edges = args.num_keep_edges
 
-        # self._criterion = criterion
-
         self.fusion_nets = []
 
         for i in range(self.fusion_levels):
@@ -237,7 +262,7 @@ class Found_Att_Fusion_Net(nn.Module):
 
         self.head_net = NAS_Head_Net(args.num_classes)
         self.head_net =self.head_net.to(device)
-        
+
 
 
     def forward(self, inputs):
@@ -298,6 +323,42 @@ class Found_Att_Fusion_Net(nn.Module):
 
 #############################################################################################################################
 ########################################## Helper Functions for Attention Fusion Network ####################################
+
+class ReshapeInputLayer(nn.Module):
+    def __init__(self, L, args):
+        super(ReshapeInputLayer, self).__init__()
+        self.C = args.C
+        self.L = L
+        self.conv = nn.Conv1d(self.C,self.C,L,L)
+        self.bn = nn.BatchNorm1d(self.C)
+        self.dropout = nn.Dropout(args.drpt)
+
+    def forward(self, x):
+        x = x.view(x.size(0),x.size(1),self.L**2)
+        out = self.conv(x)
+        out = self.bn(out)
+        out = F.relu(out)
+        out = self.dropout(out)
+
+        return out
+
+class ReshapeOutputLayer(nn.Module):
+    def __init__(self, L, args):
+        super(ReshapeOutputLayer, self).__init__()
+        self.C = args.C
+        self.L = L
+        self.tconv = nn.ConvTranspose1d(self.C,self.C,L,L)
+        self.bn = nn.BatchNorm1d(self.C)
+        self.dropout = nn.Dropout(args.drpt)
+
+    def forward(self, x):
+        out = self.tconv(x)
+        out = self.bn(out)
+        out = F.relu(out)
+        out = self.dropout(out)
+        out = out.view(out.size(0),out.size(1),self.L,self.L)
+
+        return out
 
 class SequentialList(nn.Sequential):
     """ This module exists to work around torchscript typing issues list -> list"""

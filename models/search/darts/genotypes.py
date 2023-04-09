@@ -15,9 +15,9 @@ STEP_EDGE_PRIMITIVES = [
 
 STEP_STEP_PRIMITIVES = [
     'Sum',
-    'ECAAttn',
-    'ShuffleAttn',
-    'ConcatConv'
+    'ScaleDotAttn',
+    'LinearGLU',
+    'ConcatFC'
 ]
 
 

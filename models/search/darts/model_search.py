@@ -11,11 +11,12 @@ from .node_search import FusionNode
 from IPython import embed
 
 class FusionCell(nn.Module):
-    def __init__(self, steps, multiplier, args):
+    def __init__(self,L, steps, multiplier, args):
         super(FusionCell, self).__init__()
 
         self._steps = steps
         self._multiplier = multiplier
+        self.L = L
 
         self._ops = nn.ModuleList()
         self.args = args
@@ -23,7 +24,11 @@ class FusionCell(nn.Module):
         self._step_nodes = nn.ModuleList()
         self.num_input_nodes = args.num_input_nodes
         self.C = args.C
-        self.conv1x1 = nn.Conv2d(self.C*self._multiplier,self.C, kernel_size=1)
+        self.ln = nn.LayerNorm([self.C, self.L])
+
+        self.conv1x1 = nn.Conv1d(self.C*self._multiplier,self.C, kernel_size=1)
+
+
 
         # input features is a joint list of visual_features and thermal_features
         for i in range(self._steps):
@@ -31,13 +36,13 @@ class FusionCell(nn.Module):
                 op = FusionMixedOp(self.args)
                 self._ops.append(op)
         
-        self._initialize_step_nodes(args)
+        self._initialize_step_nodes(self.L, args)
 
-    def _initialize_step_nodes(self, args):
+    def _initialize_step_nodes(self,L, args):
         for i in range(self._steps):
             num_input = self.num_input_nodes + i
             # step_node = AttentionSumNode(args, num_input)
-            step_node = FusionNode(args.node_steps, args.node_multiplier, args)
+            step_node = FusionNode(L, args.node_steps, args.node_multiplier, args)
             self._step_nodes.append(step_node)
 
     def arch_parameters(self):
@@ -61,23 +66,28 @@ class FusionCell(nn.Module):
 
         out = torch.cat(states[-self._multiplier:], dim=1)
         out = self.conv1x1(out)
+        out = self.ln(out)
+        out = F.relu(out)
+
+        # out = out.view(out.size(0), -1)
 
         return out
 
 class FusionNetwork(nn.Module):
 
-    def __init__(self, steps, multiplier, num_input_nodes, num_keep_edges, args, logger=None):
+    def __init__(self,L, steps, multiplier, num_input_nodes, num_keep_edges, args, logger=None):
         super().__init__()
         
         self.logger = logger
         self._steps = steps
         self._multiplier = multiplier
+        self.L = L
 
         # input node number in a cell
         self._num_input_nodes = num_input_nodes
         self._num_keep_edges = num_keep_edges
 
-        self.cell = FusionCell(steps, multiplier, args)
+        self.cell = FusionCell(self.L, steps, multiplier, args)
         self.cell_arch_parameters = self.cell.arch_parameters()
 
         self._initialize_alphas()

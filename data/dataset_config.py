@@ -9,9 +9,9 @@ from effdet.data.dataset_config import *
 class FlirAlignedCfg(CocoCfg):
     variant: str = ''
     splits: Dict[str, dict] = field(default_factory=lambda: dict(
-        train=dict(ann_filename='images_thermal_train_night/night_flir.json', img_dir='images_thermal_train_night/data/', has_labels=True),
-        val=dict(ann_filename='images_thermal_val_night/night_flir.json', img_dir='images_thermal_val_night/data/', has_labels=True),
-        test=dict(ann_filename='images_thermal_val_night/night_flir.json', img_dir='images_thermal_val_night/data/', has_labels=True),
+        train=dict(ann_filename='images_thermal_train/flir.json', img_dir='images_thermal_train/data/', has_labels=True),
+        val=dict(ann_filename='images_thermal_val/flir.json', img_dir='images_thermal_val/data/', has_labels=True),
+        test=dict(ann_filename='images_thermal_val/flir.json', img_dir='images_thermal_val/data/', has_labels=True),
     ))
 
 
