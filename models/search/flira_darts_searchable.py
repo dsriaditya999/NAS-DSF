@@ -209,6 +209,7 @@ class Searchable_Att_Fusion_Net(nn.Module):
         central_parameters.append({'params':self.rgb_input_reshape_layers.parameters()})
         central_parameters.append({'params':self.thermal_input_reshape_layers.parameters()})
         central_parameters.append({'params':self.output_reshape_layers.parameters()})
+        central_parameters.append({'params':self.head_net.parameters()})
 
         return central_parameters
 
@@ -249,11 +250,17 @@ class Found_Att_Fusion_Net(nn.Module):
         self.num_input_nodes = args.num_input_nodes
         self.num_keep_edges = args.num_keep_edges
 
+        self.L = [96, 48, 24, 12, 6]
+
+        self.rgb_input_reshape_layers = self.create_input_reshape_layers()
+        self.thermal_input_reshape_layers = self.create_input_reshape_layers()
+        self.output_reshape_layers = self.create_output_reshape_layers()
+
         self.fusion_nets = []
 
         for i in range(self.fusion_levels):
 
-            self.fusion_nets.append(Found_FusionNetwork( steps=self.steps, multiplier=self.multiplier, 
+            self.fusion_nets.append(Found_FusionNetwork(self.L[i], steps=self.steps, multiplier=self.multiplier, 
                                          num_input_nodes=self.num_input_nodes, num_keep_edges=self.num_keep_edges,
                                          args=self.args,
                                          genotype=self._genotype_list[i]))
@@ -263,6 +270,24 @@ class Found_Att_Fusion_Net(nn.Module):
         self.head_net = NAS_Head_Net(args.num_classes)
         self.head_net =self.head_net.to(device)
 
+    def create_input_reshape_layers(self):
+        
+        input_reshape_layers = nn.ModuleList()
+        for i in range(len(self.L)):
+            temp = nn.ModuleList()
+            for j in range(self.fusion_levels):
+                temp.append(ReshapeInputLayer(self.L[j],self.args))
+            input_reshape_layers.append(temp)
+    
+        return input_reshape_layers
+
+    def create_output_reshape_layers(self):
+        output_reshape_layers = nn.ModuleList()
+
+        for j in range(self.fusion_levels):
+            output_reshape_layers.append(ReshapeOutputLayer(self.L[j],self.args))
+    
+        return output_reshape_layers
 
 
     def forward(self, inputs):
@@ -276,10 +301,10 @@ class Found_Att_Fusion_Net(nn.Module):
 
         for i in range(self.fusion_levels):
             fusion_level_inputs["Level-"+str(i)] =  []
-            fusion_level_inputs["Level-"+str(i)] += [item[i] for item in thermal_list[1:]] 
-            fusion_level_inputs["Level-"+str(i)] += [item[i] for item in rgb_list[1:]]
+            fusion_level_inputs["Level-"+str(i)] += [self.thermal_input_reshape_layers[j][i](thermal_list[1:][j][i]) for j in range(len(thermal_list[1:]))]
+            fusion_level_inputs["Level-"+str(i)] += [self.rgb_input_reshape_layers[j][i](rgb_list[1:][j][i]) for j in range(len(rgb_list[1:]))]
 
-            out.append(self.fusion_nets[i](fusion_level_inputs["Level-"+str(i)]))
+            out.append(self.output_reshape_layers[i](self.fusion_nets[i](fusion_level_inputs["Level-"+str(i)])))
 
         x_class, x_box = self.head_net(out)
 
@@ -302,6 +327,9 @@ class Found_Att_Fusion_Net(nn.Module):
         for i in range(self.fusion_levels):
             central_parameters.append({'params':self.fusion_nets[i].parameters()})
 
+        central_parameters.append({'params':self.rgb_input_reshape_layers.parameters()})
+        central_parameters.append({'params':self.thermal_input_reshape_layers.parameters()})
+        central_parameters.append({'params':self.output_reshape_layers.parameters()})
         central_parameters.append({'params':self.head_net.parameters()})
 
         return central_parameters

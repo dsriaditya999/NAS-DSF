@@ -14,7 +14,7 @@ from IPython import embed
 from .node import *
 
 class Found_FusionCell(nn.Module):
-    def __init__(self, steps, args, genotype):
+    def __init__(self, L, steps, args, genotype):
         super().__init__()
 
         self.C = args.C
@@ -22,15 +22,17 @@ class Found_FusionCell(nn.Module):
         op_names, indices = zip(*genotype.edges)
         concat = genotype.concat
         step_nodes = genotype.steps
+        self.L = L
         self.args = args
 
-        self._compile(self.C, op_names, indices, concat, step_nodes, args)
+        self._compile(self.L, self.C, op_names, indices, concat, step_nodes, args)
         self._steps = steps
         # self.bn = nn.BatchNorm1d(self.C * self._multiplier)
-        self.conv1x1 = nn.Conv2d(self.C*self._multiplier,self.C, kernel_size=1)
+        self.ln = nn.LayerNorm([self.C , self.L])
+        self.conv1x1 = nn.Conv1d(self.C*self._multiplier,self.C, kernel_size=1)
 
 
-    def _compile(self, C, op_names, indices, concat, gene_step_nodes, args):
+    def _compile(self,L, C, op_names, indices, concat, gene_step_nodes, args):
         assert len(op_names) == len(indices)
         self._steps = len(op_names) // 2
         self._concat = concat
@@ -47,7 +49,7 @@ class Found_FusionCell(nn.Module):
         self._indices = indices
 
         for gene_step_node in gene_step_nodes:
-            step_node = Found_FusionNode(args.node_steps, args.node_multiplier, args, gene_step_node)
+            step_node = Found_FusionNode(L, args.node_steps, args.node_multiplier, args, gene_step_node)
             # try darts found node cell
             # step_node = Found_DARTS_FusionNode(args.node_steps, args.node_multiplier, args, gene_step_node)
             # try mfas fusion step node
@@ -80,6 +82,8 @@ class Found_FusionCell(nn.Module):
         
         out = torch.cat(states[-self._multiplier:], dim=1)
         out = self.conv1x1(out)
+        out = self.ln(out)
+        out = F.relu(out)
 
         return out
 
@@ -156,19 +160,20 @@ class Found_Random_FusionCell(nn.Module):
 
 class Found_FusionNetwork(nn.Module):
 
-    def __init__(self, steps, multiplier, num_input_nodes, num_keep_edges, args, genotype):
+    def __init__(self, L, steps, multiplier, num_input_nodes, num_keep_edges, args, genotype):
         super().__init__()
         
         self._steps = steps
         self._multiplier = multiplier
         self._genotype = genotype
+        self.L = L
 
         # input node number in a cell
         self._num_input_nodes = num_input_nodes
         self._num_keep_edges = num_keep_edges
         # self.drop_prob = args.drop_path_prob
 
-        self.cell = Found_FusionCell(steps, args, self._genotype)
+        self.cell = Found_FusionCell(L, steps, args, self._genotype)
         # self.cell = Found_Random_FusionCell(steps, args, self._genotype)
 
     def forward(self, input_features):

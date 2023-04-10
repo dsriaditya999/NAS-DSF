@@ -6,11 +6,12 @@ from .node_operations import *
 from IPython import embed
 
 class Found_NodeCell(nn.Module):
-    def __init__(self, node_steps, node_multiplier, args, step_genotype):
+    def __init__(self,L,  node_steps, node_multiplier, args, step_genotype):
         super().__init__()
         self.args = args
         self.node_steps = node_steps
         self.node_multiplier = node_multiplier
+        self.L = L
         
         self.edge_ops = nn.ModuleList()
         self.node_ops = nn.ModuleList()
@@ -21,24 +22,24 @@ class Found_NodeCell(nn.Module):
 
         op_names, indices = zip(*step_genotype.inner_edges)
         inner_steps = step_genotype.inner_steps
-        self.compile(op_names, indices, inner_steps)
+        self.compile(self.L, op_names, indices, inner_steps)
 
         if self.node_multiplier != 1:
-            self.out_conv = nn.Conv2d(self.C * self.node_multiplier, self.C, kernel_size=1)
-            self.bn = nn.BatchNorm2d(self.C)
+            self.out_conv = nn.Conv1d(self.C * self.node_multiplier, self.C, kernel_size=1)
+            self.bn = nn.BatchNorm1d(self.C)
             self.out_dropout = nn.Dropout(args.drpt)
 
         # skip v3 and v4
-        self.bn2 = nn.BatchNorm2d(self.C)
-        # self.dropout = nn.Dropout(args.drpt)
+        self.ln = nn.LayerNorm([self.C, self.L])
+        self.dropout = nn.Dropout(args.drpt)
 
-    def compile(self, edge_op_names, edge_indices, inner_steps):
+    def compile(self,L, edge_op_names, edge_indices, inner_steps):
         for name in edge_op_names:
             edge_op = OPS[name](self.args)
             self.edge_ops += [edge_op]
         self.edge_indices = edge_indices
         for name in inner_steps:
-            node_op = STEP_STEP_OPS[name](self.C)
+            node_op = STEP_STEP_OPS[name](self.C,L, self.args)
             self.node_ops.append(node_op)
 
     def forward(self, x, y):
@@ -71,17 +72,18 @@ class Found_NodeCell(nn.Module):
         # # skip v4
         
         out += x
-        out = self.bn2(out)
+        out = self.ln(out)
         
         return out
 
 class Found_FusionNode(nn.Module):
-    def __init__(self, node_steps, node_multiplier, args, step_genotype):
+    def __init__(self, L, node_steps, node_multiplier, args, step_genotype):
         super().__init__()
         # self.logger = logger
         self.node_steps = node_steps
         self.node_multiplier = node_multiplier
-        self.node_cell = Found_NodeCell(node_steps, node_multiplier, args, step_genotype)
+        self.L = L
+        self.node_cell = Found_NodeCell(L, node_steps, node_multiplier, args, step_genotype)
 
         self.num_input_nodes = 2
         self.num_keep_edges = 2
