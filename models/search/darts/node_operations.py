@@ -43,7 +43,9 @@ class channel_attention_block(nn.Module):
 
         self.conv = nn.Conv1d(1,1,kernel_size=adaptive_k,padding=(adaptive_k-1)//2,bias=False)
         
-        self.combine = nn.Conv2d(in_channels, int(in_channels/2), kernel_size=1)
+        self.combine = nn.Sequential(nn.Conv2d(in_channels, int(in_channels/2), kernel_size=1),
+                                     nn.BatchNorm2d(int(in_channels/2)),
+                                     nn.ReLU())
 
         self.sigmoid = nn.Sigmoid()
 
@@ -148,7 +150,10 @@ class ECAAttn(nn.Module):
 
         self.spatial_attention_block = spatial_attention_block()
 
-        self.relu = nn.ReLU()
+        
+        self.out_conv = nn.Sequential(nn.Conv2d(int(C), int(C), kernel_size=1),
+                                     nn.BatchNorm2d(int(C)),
+                                     nn.ReLU())
 
     def forward(self,x,y):
 
@@ -156,7 +161,7 @@ class ECAAttn(nn.Module):
 
         x_out = self.channel_attention_block(comb_in)
         x_out_1 = self.spatial_attention_block(x_out)
-        x_out_2 = self.relu(x_out_1)
+        x_out_2 = self.out_conv(x_out_1)
 
         return x_out_2
 
@@ -181,8 +186,14 @@ class ShuffleAttn(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
         self.gn = nn.GroupNorm(self.C // (2 * groups), self.C // (2 * groups))
-        self.combine = nn.Conv2d(self.C, int(self.C/2), kernel_size=1)
-        self.relu = nn.ReLU()
+        self.combine = nn.Sequential(nn.Conv2d(self.C, int(self.C/2), kernel_size=1),
+                                     nn.BatchNorm2d(int(self.C/2)),
+                                     nn.ReLU())
+
+        
+        self.out_conv = nn.Sequential(nn.Conv2d(int(self.C/2), int(self.C/2), kernel_size=1),
+                                     nn.BatchNorm2d(int(self.C/2)),
+                                     nn.ReLU())
         
 
     @staticmethod
@@ -227,9 +238,9 @@ class ShuffleAttn(nn.Module):
         # Reduce the Channels
         out = self.combine(out)
 
-        # Activation
+        # Output Convolution
+        out2 = self.out_conv(out)
 
-        out2 = self.relu(out)
         
         return out2
     
@@ -239,7 +250,12 @@ class ConcatConv(nn.Module):
         super().__init__()
         # 1x1 conv1d
         self.conv = nn.Conv2d(2*C, C, kernel_size=1)
+        self.bn = nn.BatchNorm2d(C)
         self.relu = nn.ReLU()
+
+        self.out_conv = nn.Sequential(nn.Conv2d(C, C, kernel_size=1),
+                                     nn.BatchNorm2d(C),
+                                     nn.ReLU())
 
     def forward(self, x, y):
         # concat on channels
@@ -247,8 +263,11 @@ class ConcatConv(nn.Module):
         out = self.conv(out)
 
         # Activation
+        out = self.bn(out)
 
         out2 = self.relu(out)
+
+        out2 = self.out_conv(out2)
         
         return out2
 
