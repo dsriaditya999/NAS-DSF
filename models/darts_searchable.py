@@ -33,7 +33,7 @@ class FlirA_Searcher():
 
         train_dataset = create_dataset(args.dataset, args.root,'train')
         val_dataset = create_dataset(args.dataset, args.root,'val')
-        test_dataset = create_dataset(args.dataset, args.root,'val')
+        test_dataset = create_dataset(args.dataset, args.root,'test')
 
         train_dataloader = create_loader(
             train_dataset,
