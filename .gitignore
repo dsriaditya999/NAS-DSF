@@ -4,3 +4,9 @@ checkpoints/
 final_exp2/
 .DS_Store
 ._.DS_Store
+data/__pycache__/*
+models/__pycache__/*
+models/auxiliary/__pycache__/*
+models/search/__pycache__/*
+models/search/darts/__pycache__/*
+models/search/train_searchable/*
