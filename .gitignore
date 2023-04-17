@@ -2,3 +2,13 @@ final_exp/
 final_exp2/
 test_commit/
 checkpoints/
+models/search/train_searchable/utils/__pycache__/*
+models/search/train_searchable/__pycache__/*
+models/search/darts/__pycache__/*
+models/search/__pycache__/*
+models/central/__pycache__/*
+models/auxiliary/__pycache__/*
+models/__pycache__/*
+data/__pycache__/*
+.DS_Store
+._.DS_Store
