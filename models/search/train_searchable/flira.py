@@ -73,11 +73,11 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
     if status == "search":
 
-        evaluator = CocoEvaluator(datasets['dev'], distributed=False, pred_yxyx=False)
+        evaluator = CocoEvaluator(datasets['dev'],logger, distributed=False, pred_yxyx=False)
 
     else:
 
-        evaluator = CocoEvaluator(datasets['test'], distributed=False, pred_yxyx=False)
+        evaluator = CocoEvaluator(datasets['test'],logger, distributed=False, pred_yxyx=False)
 
 
     for epoch in range(1, num_epochs+1):
