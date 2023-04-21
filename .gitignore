@@ -9,4 +9,4 @@ models/__pycache__/*
 models/auxiliary/__pycache__/*
 models/search/__pycache__/*
 models/search/darts/__pycache__/*
-models/search/train_searchable/*
+models/search/train_searchable/__pycache__/*
