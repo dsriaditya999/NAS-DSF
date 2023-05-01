@@ -5,14 +5,19 @@ import math
 from copy import deepcopy
 
 from PIL import Image
+from PIL import ImageEnhance
 import numpy as np
 import torch
 
 from effdet.data.transforms import _pil_interp, _size_tuple, clip_boxes_
 from effdet.data.transforms import resolve_fill_color
 
-IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+# IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
+# IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+
+IMAGENET_DEFAULT_MEAN = (0.519, 0.519, 0.519)
+IMAGENET_DEFAULT_STD = (0.225, 0.225, 0.225)
+
 IMAGENET_INCEPTION_MEAN = (0.5, 0.5, 0.5)
 IMAGENET_INCEPTION_STD = (0.5, 0.5, 0.5)
 
@@ -183,6 +188,42 @@ class RandomFlip:
                 _flipv(annotations['bbox'])
 
         return thermal_img, rgb_img, annotations
+    
+
+class RandomColorJitter:
+
+    def __init__(self, brightness=0.4, contrast=0.4, saturation=0.4, sharpness=0.4):
+        self.brightness = brightness
+        self.contrast = contrast
+        self.saturation = saturation
+        self.sharpness = sharpness
+
+
+    def _get_params(self):
+
+        brightness_factor = random.uniform(max(0, 1 - self.brightness), 1 + self.brightness)
+        contrast_factor = random.uniform(max(0, 1 - self.contrast), 1 + self.contrast)
+        saturation_factor = random.uniform(max(0, 1 - self.saturation), 1 + self.saturation)
+        sharpness_factor = random.uniform(max(0, 1 - self.sharpness), 1 + self.sharpness)
+
+        return brightness_factor, contrast_factor, saturation_factor, sharpness_factor
+
+    def __call__(self, thermal_img, rgb_img, annotations: dict):
+
+        brightness_factor, contrast_factor, saturation_factor, sharpness_factor = self._get_params()
+
+        thermal_img = ImageEnhance.Brightness(thermal_img).enhance(brightness_factor)
+        thermal_img = ImageEnhance.Contrast(thermal_img).enhance(contrast_factor)
+        thermal_img = ImageEnhance.Sharpness(thermal_img).enhance(sharpness_factor)
+
+        brightness_factor, contrast_factor, saturation_factor, sharpness_factor = self._get_params()
+
+        rgb_img = ImageEnhance.Brightness(rgb_img).enhance(brightness_factor)
+        rgb_img = ImageEnhance.Contrast(rgb_img).enhance(contrast_factor)
+        rgb_img = ImageEnhance.Color(rgb_img).enhance(saturation_factor)
+        rgb_img = ImageEnhance.Sharpness(rgb_img).enhance(sharpness_factor)
+
+        return thermal_img, rgb_img, annotations
 
 
 class Compose:
@@ -230,6 +271,7 @@ def transforms_flir_train(
 
     image_tfl = [
         RandomFlip(horizontal=True, prob=0.5),
+        RandomColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, sharpness=0.4),
         RandomResizePad(
             target_size=img_size, interpolation=interpolation, fill_color=fill_color),
         ImageToNumpy(),

@@ -42,10 +42,12 @@ class FlirA_Searcher():
             use_prefetcher=args.prefetcher,
             interpolation=input_config['interpolation'],
             fill_color=input_config['fill_color'],
-            mean=input_config['mean'],
-            std=input_config['std'],
+            mean=(0.519, 0.519, 0.519),
+            std=(0.225, 0.225, 0.225),
             num_workers=args.workers,
-            pin_mem=args.pin_mem)
+            pin_mem=args.pin_mem,
+            is_training=True
+        )
 
         val_dataloader = create_loader(
             val_dataset,
@@ -54,8 +56,8 @@ class FlirA_Searcher():
             use_prefetcher=args.prefetcher,
             interpolation=input_config['interpolation'],
             fill_color=input_config['fill_color'],
-            mean=input_config['mean'],
-            std=input_config['std'],
+            mean=(0.519, 0.519, 0.519),
+            std=(0.225, 0.225, 0.225),
             num_workers=args.workers,
             pin_mem=args.pin_mem)
 
@@ -66,8 +68,8 @@ class FlirA_Searcher():
             use_prefetcher=args.prefetcher,
             interpolation=input_config['interpolation'],
             fill_color=input_config['fill_color'],
-            mean=input_config['mean'],
-            std=input_config['std'],
+            mean=(0.519, 0.519, 0.519),
+            std=(0.225, 0.225, 0.225),
             num_workers=args.workers,
             pin_mem=args.pin_mem)
 
