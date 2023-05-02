@@ -13,3 +13,5 @@ data/__pycache__/*
 .DS_Store
 ._.DS_Store
 EXP/*
+data/.smbdeleteAAAd54d372462d0e9da
+data/._dataset_config.py
