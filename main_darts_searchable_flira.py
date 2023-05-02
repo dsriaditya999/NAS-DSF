@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument('--multiplier', type=int, help='cell output concat', default=2)
     parser.add_argument('--steps', type=int, help='cell steps', default=2)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
-    parser.add_argument('--node_steps', type=int, help='inner node steps', default=1)
+    parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
 
     # number of classes    
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
 
     args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
-    args.save = os.path.join('final_exp/flira', args.save)
+    args.save = os.path.join('EXP/flira', args.save)
     utils.create_exp_dir(args.save, scripts_to_save=None)
 
     log_format = '%(asctime)s %(message)s'
