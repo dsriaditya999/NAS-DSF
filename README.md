@@ -54,6 +54,13 @@ To run the train phase experiments, do the following:
 $ python main_darts_found_flira.py <dir of FLIR-Aligned Dataset> --search_exp_dir=<dir of search exp> --epochs=50 --batchsize=8
 ```
 
+### Test Phase
+
+To run the test phase experiments, do the following:
+
+```shell
+$ python main_darts_found_flira.py <dir of FLIR-Aligned Dataset> --search_exp_dir=<dir of search exp> --eval_exp_dir=<dir of search exp> --batchsize=8
+```
 
 
 
