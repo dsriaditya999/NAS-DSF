@@ -130,7 +130,7 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         # self._criterion = criterion
 
-        self.fusion_nets = []
+        self.fusion_nets = nn.ModuleList()
 
         for i in range(self.fusion_levels):
 
@@ -224,7 +224,7 @@ class Found_Att_Fusion_Net(nn.Module):
 
         # self._criterion = criterion
 
-        self.fusion_nets = []
+        self.fusion_nets = nn.ModuleList()
 
         for i in range(self.fusion_levels):
 
