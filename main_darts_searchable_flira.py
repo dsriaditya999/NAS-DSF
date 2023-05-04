@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument("--drpt", action="store", default=0, dest="drpt", type=float, help="dropout")
 
     # number of input features
-    parser.add_argument('--num_input_nodes', type=int, help='total number of modality features', default=10)
+    parser.add_argument('--num_input_nodes', type=int, help='total number of modality features', default=2)
     parser.add_argument('--num_keep_edges', type=int, help='cells and steps will have 2 input edges', default=2)
     
     # for cells and steps and inner representation size
