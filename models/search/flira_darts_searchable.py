@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.optim as op
 import os
 
-import models.auxiliary.scheduler as sc
+
+import torch.optim.lr_scheduler as lr_sc
 import models.auxiliary.aux_models as aux
 import models.central.ego as ego
 import models.search.train_searchable.flira as tr
@@ -81,10 +82,12 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
     logger.info("Loading Head checkpoint: " + head_path)
 
     # optimizer and scheduler
-    optimizer = op.Adam(params, lr=args.eta_max, weight_decay=1e-4)
+    optimizer = op.Adam(params, lr=args.eta_max/0.95, weight_decay=1e-4)
     # optimizer = op.Adam(None, lr=args.eta_max, weight_decay=1e-4)
-    scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
-                                              num_batches_per_epoch)
+    # scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
+    #                                           num_batches_per_epoch)
+
+    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     arch_optimizer = op.Adam(model.arch_parameters(),
             lr=args.arch_learning_rate, betas=(0.5, 0.999), weight_decay=args.arch_weight_decay)

@@ -10,6 +10,7 @@ STEP_STEP_OPS = {
     'Sum': lambda C: Sum(),
     'ECAAttn': lambda C: ECAAttn(C),
     'ShuffleAttn': lambda C: ShuffleAttn(C),
+    'CBAM': lambda C: CBAM(C),
     'ConcatConv': lambda C: ConcatConv(C)
 }
 
@@ -18,6 +19,58 @@ class Sum(nn.Module):
         super().__init__()
     def forward(self, x, y):
         return x + y
+    
+###################################################################################################
+################################### CBAM Block #################################################
+
+class CBAM(nn.Module):
+
+    def __init__(self, channel, reduction=16):
+        super(CBAM, self).__init__()
+
+        channel = channel*2
+
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel),
+        )
+        self.combine = nn.Conv2d(channel, int(channel/2), kernel_size=1)
+        self.assemble = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
+        self.relu = nn.ReLU()
+
+    def forward(self, x,y):
+        comb_in = torch.cat((x, y), dim=1)
+
+        out = self._forward_se(comb_in)
+        out = self._forward_spatial(out)
+        out = self.relu(out)
+
+        return out
+
+    def _forward_se(self, x):
+        # Channel attention module (SE with max-pool and average-pool)
+        b, c, _, _ = x.size()
+        x_avg = self.fc(self.avg_pool(x).view(b, c)).view(b, c, 1, 1)
+        x_max = self.fc(self.max_pool(x).view(b, c)).view(b, c, 1, 1)
+
+        y = torch.sigmoid(x_avg + x_max)
+
+        out = self.combine(x * y)
+
+        return out
+
+    def _forward_spatial(self, x):
+        # Spatial attention module
+        x_avg = torch.mean(x, 1, True)
+        x_max, _ = torch.max(x, 1, True)
+        y = torch.cat((x_avg, x_max), 1)
+        y = torch.sigmoid(self.assemble(y))
+
+        return x * y
 
 ###################################################################################################
 ################################### ECAAttn Block #################################################
