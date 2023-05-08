@@ -100,7 +100,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
 
     args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
-    args.save = os.path.join('EXP/flira', args.save)
+    args.save = os.path.join('EXP_CBAM/flira', args.save)
     utils.create_exp_dir(args.save, scripts_to_save=None)
 
     log_format = '%(asctime)s %(message)s'

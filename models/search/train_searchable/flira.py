@@ -60,6 +60,10 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
     freeze(model,"full_backbone")
 
+    # Freeze the Head Networks
+
+    freeze(model,"head_net")
+
     # Create a Training Bench
 
     training_bench = DetBenchTrainImagePair(model, create_labeler=True)

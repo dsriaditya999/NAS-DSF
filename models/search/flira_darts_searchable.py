@@ -184,7 +184,7 @@ class Searchable_Att_Fusion_Net(nn.Module):
         for i in range(self.fusion_levels):
             central_parameters.append({'params':self.fusion_nets[i].parameters()})
 
-        central_parameters.append({'params':self.head_net.parameters()})
+        # central_parameters.append({'params':self.head_net.parameters()})
 
         return central_parameters
 
@@ -280,7 +280,7 @@ class Found_Att_Fusion_Net(nn.Module):
         for i in range(self.fusion_levels):
             central_parameters.append({'params':self.fusion_nets[i].parameters()})
 
-        central_parameters.append({'params':self.head_net.parameters()})
+        # central_parameters.append({'params':self.head_net.parameters()})
 
         return central_parameters
 
