@@ -6,7 +6,7 @@ from .node_operations import *
 from IPython import embed
 
 class Found_NodeCell(nn.Module):
-    def __init__(self, node_steps, node_multiplier, args, step_genotype):
+    def __init__(self, cin, node_steps, node_multiplier, args, step_genotype):
         super().__init__()
         self.args = args
         self.node_steps = node_steps
@@ -15,7 +15,7 @@ class Found_NodeCell(nn.Module):
         self.edge_ops = nn.ModuleList()
         self.node_ops = nn.ModuleList()
         
-        self.C = args.C
+        self.C = cin
         
         self.num_input_nodes = 2
 
@@ -76,12 +76,13 @@ class Found_NodeCell(nn.Module):
         return out
 
 class Found_FusionNode(nn.Module):
-    def __init__(self, node_steps, node_multiplier, args, step_genotype):
+    def __init__(self, cin, node_steps, node_multiplier, args, step_genotype):
         super().__init__()
         # self.logger = logger
+        self.cin = cin
         self.node_steps = node_steps
         self.node_multiplier = node_multiplier
-        self.node_cell = Found_NodeCell(node_steps, node_multiplier, args, step_genotype)
+        self.node_cell = Found_NodeCell(cin, node_steps, node_multiplier, args, step_genotype)
 
         self.num_input_nodes = 2
         self.num_keep_edges = 2

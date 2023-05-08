@@ -233,9 +233,11 @@ class ShuffleAttn(nn.Module):
         k_size: Adaptive selection of kernel size
     """
 
-    def __init__(self, C, groups=32):
+    def __init__(self, C):
         super(ShuffleAttn, self).__init__()
         self.C = 2*C
+        groups_dict = {48: 12, 128: 32, 208: 52}
+        groups = groups_dict[C]
         self.groups = groups
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.cweight = nn.parameter.Parameter(torch.zeros(1, self.C // (2 * groups), 1, 1))

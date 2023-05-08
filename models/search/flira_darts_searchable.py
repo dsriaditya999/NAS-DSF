@@ -151,9 +151,10 @@ class Searchable_Att_Fusion_Net(nn.Module):
         self.fusion_box_net = fusion_det.box_net
 
         self.fusion_nets = nn.ModuleList()
+        self.cin = [48,128,208]
         for i in range(self.fusion_levels):
 
-            self.fusion_nets.append(FusionNetwork( steps=self.steps, multiplier=self.multiplier, 
+            self.fusion_nets.append(FusionNetwork(cin = self.cin[i], steps=self.steps, multiplier=self.multiplier, 
                                          num_input_nodes=self.num_input_nodes, num_keep_edges=self.num_keep_edges,
                                          args=args))
 
@@ -166,12 +167,6 @@ class Searchable_Att_Fusion_Net(nn.Module):
         thermal_x, rgb_x = inputs[0], inputs[1]
         thermal_x, rgb_x = self.thermal_backbone(thermal_x), self.rgb_backbone(rgb_x)
 
-        print(self.config.num_levels)
-        print(len(thermal_x), len(rgb_x))
-        print("Feature Info" + str(len(get_feature_info(self.thermal_backbone))))
-
-        for i in range(self.fusion_levels):
-            print(thermal_x[i].shape, rgb_x[i].shape)
 
         out = [self.fusion_nets[i]([thermal_x[i], rgb_x[i]]) for i in range(self.fusion_levels)]
 
@@ -246,12 +241,13 @@ class Found_Att_Fusion_Net(nn.Module):
         self.fusion_box_net = fusion_det.box_net
 
         # self._criterion = criterion
+        self.cin = [48,128,208]
 
         self.fusion_nets = nn.ModuleList()
 
         for i in range(self.fusion_levels):
 
-            self.fusion_nets.append(Found_FusionNetwork( steps=self.steps, multiplier=self.multiplier, 
+            self.fusion_nets.append(Found_FusionNetwork(cin = self.cin[i],steps=self.steps, multiplier=self.multiplier, 
                                          num_input_nodes=self.num_input_nodes, num_keep_edges=self.num_keep_edges,
                                          args=self.args,
                                          genotype=self._genotype_list[i]))

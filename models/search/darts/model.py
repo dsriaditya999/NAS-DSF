@@ -14,10 +14,10 @@ from IPython import embed
 from .node import *
 
 class Found_FusionCell(nn.Module):
-    def __init__(self, steps, args, genotype):
+    def __init__(self,cin, steps, args, genotype):
         super().__init__()
 
-        self.C = args.C
+        self.C = cin
 
         op_names, indices = zip(*genotype.edges)
         concat = genotype.concat
@@ -47,7 +47,7 @@ class Found_FusionCell(nn.Module):
         self._indices = indices
 
         for gene_step_node in gene_step_nodes:
-            step_node = Found_FusionNode(args.node_steps, args.node_multiplier, args, gene_step_node)
+            step_node = Found_FusionNode(C, args.node_steps, args.node_multiplier, args, gene_step_node)
             # try darts found node cell
             # step_node = Found_DARTS_FusionNode(args.node_steps, args.node_multiplier, args, gene_step_node)
             # try mfas fusion step node
@@ -156,8 +156,10 @@ class Found_Random_FusionCell(nn.Module):
 
 class Found_FusionNetwork(nn.Module):
 
-    def __init__(self, steps, multiplier, num_input_nodes, num_keep_edges, args, genotype):
+    def __init__(self, cin, steps, multiplier, num_input_nodes, num_keep_edges, args, genotype):
         super().__init__()
+
+        self.cin = cin
         
         self._steps = steps
         self._multiplier = multiplier
@@ -168,7 +170,7 @@ class Found_FusionNetwork(nn.Module):
         self._num_keep_edges = num_keep_edges
         # self.drop_prob = args.drop_path_prob
 
-        self.cell = Found_FusionCell(steps, args, self._genotype)
+        self.cell = Found_FusionCell(cin, steps, args, self._genotype)
         # self.cell = Found_Random_FusionCell(steps, args, self._genotype)
 
     def forward(self, input_features):

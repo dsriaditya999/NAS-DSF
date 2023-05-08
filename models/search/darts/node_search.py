@@ -10,7 +10,7 @@ from .genotypes import *
 from .model_search import FusionMixedOp
 
 class NodeCell(nn.Module):
-    def __init__(self, node_steps, node_multiplier, args):
+    def __init__(self, cin, node_steps, node_multiplier, args):
         super().__init__()
         
         self.args = args
@@ -21,7 +21,7 @@ class NodeCell(nn.Module):
         self.edge_ops = nn.ModuleList()
         self.node_ops = nn.ModuleList()
         
-        self.C = args.C
+        self.C = cin
         # self.L = args.L
         
         self.num_input_nodes = 2
@@ -70,12 +70,13 @@ class NodeCell(nn.Module):
 
 class FusionNode(nn.Module):
     
-    def __init__(self, node_steps, node_multiplier, args):
+    def __init__(self, cin, node_steps, node_multiplier, args):
         super().__init__()
         # self.logger = logger
+        self.cin = cin
         self.node_steps = node_steps
         self.node_multiplier = node_multiplier
-        self.node_cell = NodeCell(node_steps, node_multiplier, args)
+        self.node_cell = NodeCell(cin, node_steps, node_multiplier, args)
 
         self.num_input_nodes = 2
         self.num_keep_edges = 2
