@@ -73,13 +73,13 @@ class DetBenchPredict(nn.Module):
     def __init__(self, model):
         super(DetBenchPredict, self).__init__()
         self.model = model
-        self.config = model.full_backbone.config  # FIXME remove this when we can use @property (torchscript limitation)
-        self.num_levels = model.full_backbone.config.num_levels
-        self.num_classes = model.full_backbone.config.num_classes
-        self.anchors = Anchors.from_config(model.full_backbone.config)
-        self.max_detection_points = model.full_backbone.config.max_detection_points
-        self.max_det_per_image = model.full_backbone.config.max_det_per_image
-        self.soft_nms = model.full_backbone.config.soft_nms
+        self.config = model.config  # FIXME remove this when we can use @property (torchscript limitation)
+        self.num_levels = model.config.num_levels
+        self.num_classes = model.config.num_classes
+        self.anchors = Anchors.from_config(model.config)
+        self.max_detection_points = model.config.max_detection_points
+        self.max_det_per_image = model.config.max_det_per_image
+        self.soft_nms = model.config.soft_nms
 
     def forward(self, x, img_info: Optional[Dict[str, torch.Tensor]] = None):
         class_out, box_out = self.model(x)
@@ -100,17 +100,17 @@ class DetBenchTrain(nn.Module):
     def __init__(self, model, create_labeler=True):
         super(DetBenchTrain, self).__init__()
         self.model = model
-        self.config = model.full_backbone.config  # FIXME remove this when we can use @property (torchscript limitation)
-        self.num_levels = model.full_backbone.config.num_levels
-        self.num_classes = model.full_backbone.config.num_classes
-        self.anchors = Anchors.from_config(model.full_backbone.config)
-        self.max_detection_points = model.full_backbone.config.max_detection_points
-        self.max_det_per_image = model.full_backbone.config.max_det_per_image
-        self.soft_nms = model.full_backbone.config.soft_nms
+        self.config = model.config  # FIXME remove this when we can use @property (torchscript limitation)
+        self.num_levels = model.config.num_levels
+        self.num_classes = model.config.num_classes
+        self.anchors = Anchors.from_config(model.config)
+        self.max_detection_points = model.config.max_detection_points
+        self.max_det_per_image = model.config.max_det_per_image
+        self.soft_nms = model.config.soft_nms
         self.anchor_labeler = None
         if create_labeler:
             self.anchor_labeler = AnchorLabeler(self.anchors, self.num_classes, match_threshold=0.5)
-        self.loss_fn = DetectionLoss(model.full_backbone.config)
+        self.loss_fn = DetectionLoss(model.config)
 
     def forward(self, x, target: Dict[str, torch.Tensor]):
         class_out, box_out = self.model(x)

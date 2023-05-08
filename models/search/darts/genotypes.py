@@ -17,6 +17,7 @@ STEP_STEP_PRIMITIVES = [
     'Sum',
     'ECAAttn',
     'ShuffleAttn',
+    'CBAM',
     'ConcatConv'
 ]
 

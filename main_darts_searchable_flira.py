@@ -22,10 +22,12 @@ def parse_args():
     parser.add_argument('--checkpointdir', type=str, help='pretrained checkpoints and annotations dir',
                         default='checkpoints/flira')
     #parser.add_argument('--annotation', default='egogestureall_but_None.json', type=str, help='Annotation file path')
-    parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
-                        default='Att_Fusion_Net_Pretrained_Best.pth.tar')
-    parser.add_argument('--head_path', type=str, help='Head model pth path',
-                        default='Head_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
+    #                     default='Att_Fusion_Net_Pretrained_Best.pth.tar')
+    parser.add_argument('--model_path', type=str, help='Model path',
+                        default='model_best.pth.tar')
+    # parser.add_argument('--head_path', type=str, help='Head model pth path',
+    #                     default='Head_Net_Pretrained_Best.pth.tar')
     # parser.add_argument('--depth_cp', type=str, help='depth video model pth path',
     #                     default='egogesture_resnext_1.0x_Depth_32_acc_93.61060.pth')
     
@@ -63,7 +65,7 @@ def parse_args():
     parser.add_argument('--steps', type=int, help='cell steps', default=2)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
     parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
-    parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
+    parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=3)
 
     # number of classes    
     # parser.add_argument('--num_outputs', type=int, help='output dimension', default=83)
@@ -100,7 +102,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
 
     args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
-    args.save = os.path.join('EXP/flira', args.save)
+    args.save = os.path.join('EXP_MOD/flira', args.save)
     utils.create_exp_dir(args.save, scripts_to_save=None)
 
     log_format = '%(asctime)s %(message)s'

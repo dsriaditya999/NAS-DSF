@@ -14,3 +14,5 @@ data/__pycache__/*
 ._.DS_Store
 EXP/*
 data/.smbdeleteAAAd54d372462d0e9da
+EXP_CBAM/*
+EXP_MOD/*

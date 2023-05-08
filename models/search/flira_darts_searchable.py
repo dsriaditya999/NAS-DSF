@@ -5,6 +5,7 @@ import os
 
 import models.auxiliary.scheduler as sc
 import models.auxiliary.aux_models as aux
+import torch.optim.lr_scheduler as lr_sc
 import models.central.ego as ego
 import models.search.train_searchable.flira as tr
 import torch.nn.functional as F
@@ -68,23 +69,34 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
 
     # loading pretrained weights
 
-    full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
+    # bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
 
-    model.full_backbone.load_state_dict(torch.load(full_bb_path))
+    # model.full_backbone.load_state_dict(torch.load(full_bb_path))
 
-    logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
+    # logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
 
-    head_path = os.path.join(args.checkpointdir, args.head_path)
+    # head_path = os.path.join(args.checkpointdir, args.head_path)
 
-    model.head_net.load_state_dict(torch.load(head_path))
+    # model.head_net.load_state_dict(torch.load(head_path))
 
-    logger.info("Loading Head checkpoint: " + head_path)
+    # logger.info("Loading Head checkpoint: " + head_path)
+
+    checkpoint_path = os.path.join(args.checkpointdir, args.model_path)
+
+    checkpoint = torch.load(checkpoint_path)
+    checkpoint_dict = checkpoint["state_dict"]
+    net_dict = model.state_dict()
+    new_checkpoint_dict = {k: v for k, v in checkpoint_dict.items() if k in net_dict}
+    net_dict.update(new_checkpoint_dict)
+    model.load_state_dict(net_dict) 
+
+    logger.info("Loading Model Checkpoint: " + checkpoint_path)
 
     # optimizer and scheduler
     optimizer = op.Adam(params, lr=args.eta_max, weight_decay=1e-4)
     # optimizer = op.Adam(None, lr=args.eta_max, weight_decay=1e-4)
-    scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
-                                              num_batches_per_epoch)
+    
+    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     arch_optimizer = op.Adam(model.arch_parameters(),
             lr=args.arch_learning_rate, betas=(0.5, 0.999), weight_decay=args.arch_weight_decay)
@@ -135,9 +147,10 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         fusion_det = EfficientDet(self.config)
         self.fusion_fpn = fusion_det.fpn
+        self.fusion_class_net = fusion_det.class_net
+        self.fusion_box_net = fusion_det.box_net
 
-
-        self.fusion_nets = []
+        self.fusion_nets = nn.ModuleList()
         for i in range(self.fusion_levels):
 
             self.fusion_nets.append(FusionNetwork( steps=self.steps, multiplier=self.multiplier, 
@@ -146,16 +159,25 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
             self.fusion_nets[i] = self.fusion_nets[i].to(device)
 
-        self.head_net = NAS_Head_Net(args.num_classes)
-        self.head_net =self.head_net.to(device)
 
 
     def forward(self,inputs):
 
         thermal_x, rgb_x = inputs[0], inputs[1]
         thermal_x, rgb_x = self.thermal_backbone(thermal_x), self.rgb_backbone(rgb_x)
+
+        print(self.config.num_levels)
+        print(len(thermal_x), len(rgb_x))
+        print("Feature Info" + str(len(get_feature_info(self.thermal_backbone))))
+
+        for i in range(self.fusion_levels):
+            print(thermal_x[i].shape, rgb_x[i].shape)
+
         out = [self.fusion_nets[i]([thermal_x[i], rgb_x[i]]) for i in range(self.fusion_levels)]
-        x_class, x_box = self.head_net(out)
+
+        out = self.fusion_fpn(out)
+
+        x_class, x_box = self.fusion_class_net(out), self.fusion_box_net(out)
 
         return x_class, x_box
 
@@ -186,6 +208,10 @@ class Searchable_Att_Fusion_Net(nn.Module):
             arch_parameters.append({'params':self.fusion_nets[i].arch_parameters()})
 
         return arch_parameters
+    
+
+
+
 
 #############################################################################################################################
 ########################################## Found Attention Fusion Network ##############################################
@@ -195,12 +221,7 @@ class Found_Att_Fusion_Net(nn.Module):
         super().__init__()
 
         self.args = args
-
-
         self._genotype_list = genotype_list
-
-        self.full_backbone = Att_Fusion_Net(args.num_classes)
-
         self.multiplier = args.multiplier
         self.steps = args.steps
         self.parallel = args.parallel
@@ -209,9 +230,24 @@ class Found_Att_Fusion_Net(nn.Module):
         self.num_input_nodes = args.num_input_nodes
         self.num_keep_edges = args.num_keep_edges
 
+
+        self.config = effdet.config.model_config.get_efficientdet_config('efficientdetv2_dt')
+        self.config.num_classes = args.num_classes
+
+        thermal_det = EfficientDet(self.config)
+        rgb_det = EfficientDet(self.config)
+        
+        self.thermal_backbone = thermal_det.backbone
+        self.rgb_backbone = rgb_det.backbone
+
+        fusion_det = EfficientDet(self.config)
+        self.fusion_fpn = fusion_det.fpn
+        self.fusion_class_net = fusion_det.class_net
+        self.fusion_box_net = fusion_det.box_net
+
         # self._criterion = criterion
 
-        self.fusion_nets = []
+        self.fusion_nets = nn.ModuleList()
 
         for i in range(self.fusion_levels):
 
@@ -221,29 +257,35 @@ class Found_Att_Fusion_Net(nn.Module):
                                          genotype=self._genotype_list[i]))
 
             self.fusion_nets[i] = self.fusion_nets[i].to(device)
-
-        self.head_net = NAS_Head_Net(args.num_classes)
-        self.head_net =self.head_net.to(device)
         
 
 
     def forward(self, inputs):
 
-        self.full_backbone.eval()
+        # self.full_backbone.eval()
 
-        thermal_list, rgb_list = self.full_backbone(inputs)
+        # thermal_list, rgb_list = self.full_backbone(inputs)
 
-        fusion_level_inputs = {}
-        out = []
+        # fusion_level_inputs = {}
+        # out = []
 
-        for i in range(self.fusion_levels):
-            fusion_level_inputs["Level-"+str(i)] =  []
-            fusion_level_inputs["Level-"+str(i)] += [item[i] for item in thermal_list[1:]] 
-            fusion_level_inputs["Level-"+str(i)] += [item[i] for item in rgb_list[1:]]
+        # for i in range(self.fusion_levels):
+        #     fusion_level_inputs["Level-"+str(i)] =  []
+        #     fusion_level_inputs["Level-"+str(i)] += [item[i] for item in thermal_list[1:]] 
+        #     fusion_level_inputs["Level-"+str(i)] += [item[i] for item in rgb_list[1:]]
 
-            out.append(self.fusion_nets[i](fusion_level_inputs["Level-"+str(i)]))
+        #     out.append(self.fusion_nets[i](fusion_level_inputs["Level-"+str(i)]))
 
-        x_class, x_box = self.head_net(out)
+        # x_class, x_box = self.head_net(out)
+
+        thermal_x, rgb_x = inputs[0], inputs[1]
+        thermal_x, rgb_x = self.thermal_backbone(thermal_x), self.rgb_backbone(rgb_x)
+
+        out = [self.fusion_nets[i]([thermal_x[i], rgb_x[i]]) for i in range(self.fusion_levels)]
+
+        out = self.fusion_fpn(out)
+
+        x_class, x_box = self.fusion_class_net(out), self.fusion_box_net(out)
 
         return x_class, x_box
 
@@ -264,15 +306,9 @@ class Found_Att_Fusion_Net(nn.Module):
         for i in range(self.fusion_levels):
             central_parameters.append({'params':self.fusion_nets[i].parameters()})
 
-        central_parameters.append({'params':self.head_net.parameters()})
 
         return central_parameters
 
-    
-    def _loss(self, input_features, labels):
-        # logits = self(input_features)
-        # return self._criterion(logits, labels) 
-        pass
 
     def arch_parameters(self):
 
@@ -284,24 +320,4 @@ class Found_Att_Fusion_Net(nn.Module):
         return arch_parameters
 
 
-#################################################################################################################################
-#################################################################################################################################
-
-class NAS_Head_Net(nn.Module):
-
-    def __init__(self,num_classes):
-        super(NAS_Head_Net, self).__init__()
-
-        self.config = effdet.config.model_config.get_efficientdet_config('efficientdetv2_dt')
-        self.config.num_classes = num_classes
-
-        fusion_det = EfficientDet(self.config)
-        self.fusion_class_net = fusion_det.class_net
-        self.fusion_box_net = fusion_det.box_net
-
-    def forward(self, x):
-        
-        return self.fusion_class_net(x), self.fusion_box_net(x)
-
-
-#################################################################################################################################
+#############################################################################################################################

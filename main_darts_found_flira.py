@@ -7,6 +7,7 @@ import sys
 import os
 import numpy as np
 
+import torch.optim.lr_scheduler as lr_sc
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as op
@@ -41,10 +42,15 @@ def parse_args():
     parser.add_argument('--checkpointdir', type=str, help='pretrained checkpoints and annotations dir',
                         default='checkpoints/flira')
     #parser.add_argument('--annotation', default='egogestureall_but_None.json', type=str, help='Annotation file path')
-    parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
-                        default='Att_Fusion_Net_Pretrained_Best.pth.tar')
-    parser.add_argument('--head_path', type=str, help='Head model pth path',
-                        default='Head_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
+    #                     default='Att_Fusion_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--backbone_path', type=str, help='Backbone model pth path',
+    #                     default='model_best.pth.tar')
+    # parser.add_argument('--head_path', type=str, help='Head model pth path',
+    #                     default='Head_Net_Pretrained_Best.pth.tar')
+    
+    parser.add_argument('--model_path', type=str, help='Model path',
+                        default='model_best.pth.tar')
     # parser.add_argument('--depth_cp', type=str, help='depth video model pth path',
     #                     default='egogesture_resnext_1.0x_Depth_32_acc_93.61060.pth')
     
@@ -86,7 +92,7 @@ def parse_args():
     parser.add_argument('--steps', type=int, help='cell steps', default=2)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
     parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
-    parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
+    parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=3)
     
     # number of classes    
     parser.add_argument('--num-classes', type=int, default=90, metavar='N',
@@ -186,23 +192,33 @@ def train_model(model, dataloaders, datasets, args, device, logger):
 
     # loading pretrained weights
 
-    full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
+    # full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
 
-    model.full_backbone.load_state_dict(torch.load(full_bb_path))
+    # model.full_backbone.load_state_dict(torch.load(full_bb_path))
 
-    logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
+    # logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
 
-    head_path = os.path.join(args.checkpointdir, args.head_path)
+    # head_path = os.path.join(args.checkpointdir, args.head_path)
 
-    model.head_net.load_state_dict(torch.load(head_path))
+    # model.head_net.load_state_dict(torch.load(head_path))
 
-    logger.info("Loading Head checkpoint: " + head_path)
+    # logger.info("Loading Head checkpoint: " + head_path)
+
+    checkpoint_path = os.path.join(args.checkpointdir, args.model_path)
+
+    checkpoint = torch.load(checkpoint_path)
+    checkpoint_dict = checkpoint["state_dict"]
+    net_dict = model.state_dict()
+    new_checkpoint_dict = {k: v for k, v in checkpoint_dict.items() if k in net_dict}
+    net_dict.update(new_checkpoint_dict)
+    model.load_state_dict(net_dict) 
+
+    logger.info("Loading Model Checkpoint: " + checkpoint_path)
 
     # optimizer and scheduler
     optimizer = op.Adam(params, lr=args.eta_max, weight_decay=1e-4)
 
-    scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
-                                              num_batches_per_epoch)
+    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     # hardware tuning
     if torch.cuda.device_count() > 1 and args.parallel:

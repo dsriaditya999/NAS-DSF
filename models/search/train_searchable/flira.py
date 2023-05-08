@@ -56,9 +56,13 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
           config=config
         )
 
-    # Freeze the Backbone
+    # Freeze Everything except the fusion nets
 
-    freeze(model,"full_backbone")
+    freeze(model,"thermal_backbone")
+    freeze(model,"rgb_backbone")
+    freeze(model,"fusion_fpn")
+    freeze(model,"fusion_class_net")
+    freeze(model,"fusion_box_net")
 
     # Create a Training Bench
 
