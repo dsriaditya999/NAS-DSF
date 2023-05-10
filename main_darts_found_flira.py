@@ -82,14 +82,14 @@ def parse_args():
     parser.add_argument("--drpt", action="store", default=0.2, dest="drpt", type=float, help="dropout")
 
     # number of input features
-    parser.add_argument('--num_input_nodes', type=int, help='total number of modality features', default=10)
+    parser.add_argument('--num_input_nodes', type=int, help='total number of modality features', default=2)
     parser.add_argument('--num_keep_edges', type=int, help='cells and steps will have 2 input edges', default=2)
     
     # for cells and steps and inner representation size
     parser.add_argument('--C', type=int, help='channels', default=128)
     parser.add_argument('--L', type=int, help='length after pool', default=8)
-    parser.add_argument('--multiplier', type=int, help='cell output concat', default=2)
-    parser.add_argument('--steps', type=int, help='cell steps', default=2)
+    parser.add_argument('--multiplier', type=int, help='cell output concat', default=1)
+    parser.add_argument('--steps', type=int, help='cell steps', default=1)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
     parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=3)

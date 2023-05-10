@@ -134,6 +134,8 @@ class FusionNetwork(nn.Module):
 
                             node_pairs.append([j, k, W_j_max * W_k_max])
 
+                print('node_pairs: ', node_pairs)
+
                 selected_node_pair = sorted(node_pairs, key=lambda x: -x[2])[:1][0]
                 edges = selected_node_pair[0:2]
                 selected_edges.append(edges)

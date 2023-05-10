@@ -203,16 +203,18 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
                 for i in range(training_bench.model.fusion_levels):
                     fusion_net_params += count_parameters(training_bench.model.fusion_nets[i])
 
-                full_backbone_params = count_parameters(training_bench.model.full_backbone)
-                head_net_params = count_parameters(training_bench.model.head_net)
+                full_backbone_params = count_parameters(training_bench.model.thermal_backbone) + count_parameters(training_bench.model.rgb_backbone)
+                head_net_params = count_parameters(training_bench.model.fusion_class_net) + count_parameters(training_bench.model.fusion_box_net)
+                bifpn_params = count_parameters(training_bench.model.fusion_fpn)
                 full_params = count_parameters(training_bench.model)
 
                 # total_params = sum(p.numel() for p in training_bench.model.parameters())
                 # total_trainable_params = sum(p.numel() for p in training_bench.model.parameters() if p.requires_grad)
 
                 print("*"*50)
-                logger.info("Full Backbone Params : {}".format(full_backbone_params) )
+                logger.info("Backbone Params : {}".format(full_backbone_params) )
                 logger.info("Head Network Params : {}".format(head_net_params) )
+                logger.info("BiFPN Params : {}".format(bifpn_params) )
                 logger.info("Fusion Nets Params : {}".format(fusion_net_params) )
                 logger.info("Total Model Parameters : {}".format(full_params) )
                 print("*"*50)
