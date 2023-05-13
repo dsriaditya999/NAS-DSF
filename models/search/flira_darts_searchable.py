@@ -87,16 +87,20 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
     checkpoint_dict = checkpoint["state_dict"]
     net_dict = model.state_dict()
     new_checkpoint_dict = {k: v for k, v in checkpoint_dict.items() if k in net_dict}
+    for k, v in new_checkpoint_dict.items():
+            if "fusion_cbam" in k:
+                print(k)
+                print("Something is wrong")
     net_dict.update(new_checkpoint_dict)
     model.load_state_dict(net_dict) 
 
     logger.info("Loading Model Checkpoint: " + checkpoint_path)
 
     # optimizer and scheduler
-    optimizer = op.Adam(params, lr=args.eta_max, weight_decay=1e-4)
+    optimizer = op.Adam(params, lr=1e-3, weight_decay=1e-4)
     # optimizer = op.Adam(None, lr=args.eta_max, weight_decay=1e-4)
     
-    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
+    # scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     arch_optimizer = op.Adam(model.arch_parameters(),
             lr=args.arch_learning_rate, betas=(0.5, 0.999), weight_decay=args.arch_weight_decay)
@@ -110,8 +114,9 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
 
     plotter = Plotter(args)
 
+
     best_score, best_genotype = tr.train_flira_track_acc(model, architect,
-                                            optimizer, scheduler, dataloaders, datasets,
+                                            optimizer, dataloaders, datasets,
                                             dataset_sizes,
                                             device=device, 
                                             num_epochs=args.epochs, 

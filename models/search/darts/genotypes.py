@@ -13,13 +13,22 @@ STEP_EDGE_PRIMITIVES = [
     'skip'
 ]
 
-STEP_STEP_PRIMITIVES = [
+# STEP_STEP_PRIMITIVES = [
+#     'Sum',
+#     'ECAAttn',
+#     'ShuffleAttn',
+#     'CBAM',
+#     'ConcatConv'
+# ]
+
+
+STEP_STEP_PRIMITIVES = {
     'Sum',
-    'ECAAttn',
-    'ShuffleAttn',
-    'CBAM',
+    'ECA_CA',
+    'Spatial_Att',
+    'CBAM_CA',
     'ConcatConv'
-]
+}
 
 
 # STEP_STEP_PRIMITIVES = [

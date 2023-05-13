@@ -6,11 +6,19 @@ import math
 from .genotypes import *
 
 # all node operations has two input and one output, 2C -> C
+# STEP_STEP_OPS = {
+#     'Sum': lambda C: Sum(),
+#     'ECAAttn': lambda C: ECAAttn(C),
+#     'ShuffleAttn': lambda C: ShuffleAttn(C),
+#     'CBAM': lambda C: CBAM(C),
+#     'ConcatConv': lambda C: ConcatConv(C)
+# }
+
 STEP_STEP_OPS = {
     'Sum': lambda C: Sum(),
-    'ECAAttn': lambda C: ECAAttn(C),
-    'ShuffleAttn': lambda C: ShuffleAttn(C),
-    'CBAM': lambda C: CBAM(C),
+    'ECA_CA': lambda C: ECA_CA(C),
+    'Spatial_Att': lambda C: Spatial_Attention(C),
+    'CBAM_CA': lambda C: CBAM_CA(C),
     'ConcatConv': lambda C: ConcatConv(C)
 }
 
@@ -41,14 +49,14 @@ class CBAM(nn.Module):
         )
         self.combine = nn.Conv2d(channel, int(channel/2), kernel_size=1)
         self.assemble = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
     def forward(self, x,y):
         comb_in = torch.cat((x, y), dim=1)
 
         out = self._forward_se(comb_in)
         out = self._forward_spatial(out)
-        out = self.relu(out)
+        # out = self.relu(out)
 
         return out
 
@@ -211,7 +219,7 @@ class ECAAttn(nn.Module):
         #                              nn.BatchNorm2d(int(C)),
         #                              nn.ReLU())
 
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
     def forward(self,x,y):
 
@@ -220,9 +228,9 @@ class ECAAttn(nn.Module):
         x_out = self.channel_attention_block(comb_in)
         x_out_1 = self.spatial_attention_block(x_out)
         # x_out_2 = self.out_conv(x_out_1)
-        x_out_2 = self.relu(x_out_1)
+        # x_out_2 = self.relu(x_out_1)
 
-        return x_out_2
+        return x_out_1
 
 #######################################################################################################
 ################################### ShuffleAttn Block #################################################
@@ -256,7 +264,7 @@ class ShuffleAttn(nn.Module):
         #                              nn.BatchNorm2d(int(self.C/2)),
         #                              nn.ReLU())
         self.combine = nn.Conv2d(self.C, int(self.C/2), kernel_size=1)
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
     @staticmethod
     def channel_shuffle(x, groups):
@@ -305,9 +313,9 @@ class ShuffleAttn(nn.Module):
 
         # Activation
 
-        out2 = self.relu(out)
+        # out2 = self.relu(out)
 
-        return out2
+        return out
     
 
 class ConcatConv(nn.Module):
@@ -316,7 +324,7 @@ class ConcatConv(nn.Module):
         # 1x1 conv1d
         self.conv = nn.Conv2d(2*C, C, kernel_size=1)
         # self.bn = nn.BatchNorm2d(C)
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
         # self.out_conv = nn.Sequential(nn.Conv2d(C, C, kernel_size=1),
         #                              nn.BatchNorm2d(C),
@@ -330,11 +338,154 @@ class ConcatConv(nn.Module):
         # Activation
         # out = self.bn(out)
 
-        out2 = self.relu(out)
+        # out2 = self.relu(out)
 
         # out2 = self.out_conv(out2)
         
-        return out2
+        return out
+    
+
+
+#######################################################################################################
+################################### Sub Attention Operations ##########################################
+
+class CBAM_CA(nn.Module):
+
+    def __init__(self, channel, reduction=16):
+        super(CBAM_CA, self).__init__()
+
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel),
+        )
+        self.combine = nn.Conv2d(2*channel, channel, kernel_size=1)
+
+    def forward(self, x,y):
+        comb_in = torch.cat((x, y), dim=1)
+        inp = self.combine(comb_in)
+        out = self._forward_se(inp)
+        return out
+
+    def _forward_se(self, x):
+        # Channel attention module (SE with max-pool and average-pool)
+        b, c, _, _ = x.size()
+        x_avg = self.fc(self.avg_pool(x).view(b, c)).view(b, c, 1, 1)
+        x_max = self.fc(self.max_pool(x).view(b, c)).view(b, c, 1, 1)
+        y = torch.sigmoid(x_avg + x_max)
+        out = x * y
+        return out
+    
+
+class Spatial_Attention(nn.Module):
+
+    def __init__(self, channel):
+        super(Spatial_Attention, self).__init__()
+
+        self.combine = nn.Conv2d(2*channel, channel, kernel_size=1)
+        self.assemble = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
+
+
+    def forward(self, x,y):
+        comb_in = torch.cat((x, y), dim=1)
+        inp = self.combine(comb_in)
+
+        out = self._forward_spatial(inp)
+
+        return out
+
+
+    def _forward_spatial(self, x):
+        # Spatial attention module
+        x_avg = torch.mean(x, 1, True)
+        x_max, _ = torch.max(x, 1, True)
+        y = torch.cat((x_avg, x_max), 1)
+        y = torch.sigmoid(self.assemble(y))
+
+        return x * y
+    
+
+class ECA_CA(nn.Module):
+
+    def __init__(self,C):
+
+        super(ECA_CA,self).__init__()
+
+        self.channel_attention_block = channel_attention_block_standalone(in_channels=C)
+        self.combine = nn.Conv2d(2*C, C, kernel_size=1)
+
+
+
+    def forward(self,x,y):
+
+        comb_in = torch.cat((x, y), dim=1)
+
+        inp = self.combine(comb_in)
+
+        x_out = self.channel_attention_block(inp)
+
+        return x_out
+
+class channel_attention_block_standalone(nn.Module):
+
+    """ Implements a Channel Attention Block """
+
+    def __init__(self,in_channels):
+
+        super(channel_attention_block_standalone, self).__init__()
+        
+        adaptive_k = self.channel_att_kernel_calc(in_channels)
+        
+
+        self.pool_types = ["max","avg"]
+
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.conv = nn.Conv1d(1,1,kernel_size=adaptive_k,padding=(adaptive_k-1)//2,bias=False)
+        
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self,x):
+
+        channel_att_sum = None
+
+        for pool_type in self.pool_types:
+
+            if pool_type == "avg":
+
+                avg_pool = self.avg_pool(x)
+                channel_att_raw = self.conv(avg_pool.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
+
+            elif pool_type == "max":
+
+                max_pool = self.max_pool(x)
+                channel_att_raw = self.conv(max_pool.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
+
+            if channel_att_sum is None:
+
+                channel_att_sum = channel_att_raw
+
+            else:
+                channel_att_sum = channel_att_sum + channel_att_raw
+
+        gate = self.sigmoid(channel_att_sum).expand_as(x)
+
+        return x*gate
+    
+    
+    def channel_att_kernel_calc(self,num_channels,gamma=2,b=1):
+        b=1
+        gamma = 2
+        t = int(abs((math.log(num_channels,2)+b)/gamma))
+        k = t if t%2 else t+1
+        
+        return k
+
 
 
 class NodeMixedOp(nn.Module):

@@ -63,7 +63,7 @@ def parse_args():
     parser.add_argument('--L', type=int, help='length after pool', default=8)
     parser.add_argument('--multiplier', type=int, help='cell output concat', default=1)
     parser.add_argument('--steps', type=int, help='cell steps', default=1)
-    parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
+    parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=1)
     parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=3)
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
 
     args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
-    args.save = os.path.join('EXP_MOD/flira', args.save)
+    args.save = os.path.join('FINAL_EXP_MOD_NAS/flira', args.save)
     utils.create_exp_dir(args.save, scripts_to_save=None)
 
     log_format = '%(asctime)s %(message)s'
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     flira_searcher = S.FlirA_Searcher(args, device, logger)
 
     # search
-    logger.info("NAS-DSF for FLIR-Aligned Started.")
+    logger.info("MOD-NAS-DSF for FLIR-Aligned Started.")
     start_time = time.time()
     best_score, best_genotype = flira_searcher.search()
     time_elapsed = time.time() - start_time

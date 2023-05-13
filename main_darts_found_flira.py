@@ -90,8 +90,8 @@ def parse_args():
     parser.add_argument('--L', type=int, help='length after pool', default=8)
     parser.add_argument('--multiplier', type=int, help='cell output concat', default=1)
     parser.add_argument('--steps', type=int, help='cell steps', default=1)
-    parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
-    parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
+    parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=1)
+    parser.add_argument('--node_steps', type=int, help='inner node steps', default=1)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=3)
     
     # number of classes    
@@ -182,7 +182,7 @@ def get_data(args):
 
 def train_model(model, dataloaders, datasets, args, device, logger):
 
-    dataset_sizes = {x: len(dataloaders[x].dataset) for x in ['train', 'test']}
+    dataset_sizes = {x: len(dataloaders[x].dataset) for x in ['train','dev','test']}
     num_batches_per_epoch = dataset_sizes['train'] / args.batchsize
 
     if torch.cuda.device_count() > 1 and args.parallel:
@@ -210,15 +210,19 @@ def train_model(model, dataloaders, datasets, args, device, logger):
     checkpoint_dict = checkpoint["state_dict"]
     net_dict = model.state_dict()
     new_checkpoint_dict = {k: v for k, v in checkpoint_dict.items() if k in net_dict}
+    for k, v in new_checkpoint_dict.items():
+            if "fusion_cbam" in k:
+                print(k)
+                print("Something is wrong")
     net_dict.update(new_checkpoint_dict)
     model.load_state_dict(net_dict) 
 
     logger.info("Loading Model Checkpoint: " + checkpoint_path)
 
     # optimizer and scheduler
-    optimizer = op.Adam(params, lr=args.eta_max, weight_decay=1e-4)
+    optimizer = op.Adam(params, lr=1e-3, weight_decay=1e-4)
 
-    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
+    # scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     # hardware tuning
     if torch.cuda.device_count() > 1 and args.parallel:
@@ -230,7 +234,7 @@ def train_model(model, dataloaders, datasets, args, device, logger):
     # status 
     status = 'eval'
     test_metric = tr.train_flira_track_acc(model, None, optimizer, 
-                                            scheduler, dataloaders, datasets, dataset_sizes,
+                                           dataloaders, datasets, dataset_sizes,
                                             device, args.epochs,
                                             args.parallel, logger, plotter, args,
                                             status)
@@ -285,8 +289,8 @@ if __name__ == "__main__":
         args.save = 'test-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
         args.save = os.path.join(eval_exp_dir, args.save)
         
-        best_test_model_path = os.path.join(eval_exp_dir, 'best', 'best_test_model.pt')
-        best_genotype_path = os.path.join(eval_exp_dir, 'best', 'best_test_genotype.pkl')
+        best_test_model_path = os.path.join(eval_exp_dir, 'best', 'best_model.pt')
+        best_genotype_path = os.path.join(eval_exp_dir, 'best', 'best_genotype.pkl')
 
     elif args.search_exp_dir != None:
         best_genotype_path = os.path.join(args.search_exp_dir, 'best', 'best_genotype.pkl')

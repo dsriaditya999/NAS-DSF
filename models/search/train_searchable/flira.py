@@ -29,7 +29,7 @@ def set_eval_mode(network, freeze_layer):
             module.eval()
 
 # train model with darts mixed operations (in Search Phase)
-def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, datasets, dataset_sizes,
+def train_flira_track_acc(model, architect, optimizer, dataloaders, datasets, dataset_sizes,
                 device=None, num_epochs=200, parallel=False, logger=None,
                 plotter=None, args=None, status='search'):
 
@@ -40,9 +40,9 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
     best_metric = 0
     best_epoch = 0
     
-    best_test_genotype = None
-    best_test_metric = 0
-    best_test_epoch = 0
+    # best_dev_genotype = None
+    # best_dev_metric = 0
+    # best_dev_epoch = 0
     # best_test_model_sd = copy.deepcopy(model.state_dict())
 
 
@@ -81,7 +81,7 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
     else:
 
-        evaluator = CocoEvaluator(datasets['test'],logger, distributed=False, pred_yxyx=False)
+        evaluator = CocoEvaluator(datasets['dev'],logger, distributed=False, pred_yxyx=False)
 
 
     for epoch in range(1, num_epochs+1):
@@ -94,19 +94,26 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
             phases = ['train', 'dev']
         else:
             # here the train is train + dev
-            phases = ['train', 'test']
+            phases = ['train', 'dev']
 
         for phase in phases:
             if phase == 'train':
-                if not isinstance(scheduler, sc.LRCosineAnnealingScheduler):
-                    scheduler.step()
                 training_bench.train()  # Set model to training mode
-                set_eval_mode(training_bench, "full_backbone") 
+                set_eval_mode(training_bench, "rgb_backbone") 
+                set_eval_mode(training_bench, "thermal_backbone") 
+                set_eval_mode(training_bench, "fusion_fpn") 
+                set_eval_mode(training_bench, "fusion_class_net")
+                set_eval_mode(training_bench, "fusion_box_net")
+
             elif phase == 'dev':
                 if architect is not None:
                     architect.log_learning_rate(logger)
                 training_bench.train()  # Set model to training mode
-                set_eval_mode(training_bench, "full_backbone") 
+                set_eval_mode(training_bench, "rgb_backbone") 
+                set_eval_mode(training_bench, "thermal_backbone") 
+                set_eval_mode(training_bench, "fusion_fpn") 
+                set_eval_mode(training_bench, "fusion_class_net")
+                set_eval_mode(training_bench, "fusion_box_net") 
             else:
                 training_bench.eval()  # Set model to evaluate mode
 
@@ -139,15 +146,15 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
                     # forward
                     # track history if only in train
-                    flag = (phase == 'train' or (phase == 'dev' and status == 'eval'))
+                    flag = phase =='train' #(phase == 'train' or (phase == 'dev' and status == 'eval'))
                     with torch.set_grad_enabled(flag):
                         output = training_bench(thermal_img_tensor, rgb_img_tensor, target, eval_pass= not flag)
                         loss = output['loss']
                         # backward + optimize only if in training phase
                         if flag:
-                            if isinstance(scheduler, sc.LRCosineAnnealingScheduler):
-                                scheduler.step()
-                                scheduler.update_optimizer(optimizer)
+                            # if isinstance(scheduler, sc.LRCosineAnnealingScheduler):
+                            #     scheduler.step()
+                            #     scheduler.update_optimizer(optimizer)
                             loss.backward()
                             optimizer.step()
 
@@ -157,7 +164,7 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
                     # statistics
                     running_loss += loss.item() * rgb_img_tensor.size(0)
 
-                    if (phase=='dev' and status=='search') or (phase=='test' and status=='eval'):
+                    if (phase=='dev' and status=='search') or (phase=='dev' and status=='eval'):
 
                         evaluator.add_predictions(output['detections'], target)
                         
@@ -172,9 +179,11 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
                     t.set_postfix_str(postfix_str)
                     t.update()
 
+            # print(dataset_sizes.keys())
+
             epoch_loss = running_loss / dataset_sizes[phase]
 
-            if (phase=='dev' and status=='search') or (phase=='test' and status=='eval'):
+            if (phase=='dev' and status=='search') or (phase=='dev' and status=='eval'):
 
                 epoch_metric  = evaluator.evaluate()
 
@@ -217,6 +226,9 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
                 logger.info("BiFPN Params : {}".format(bifpn_params) )
                 logger.info("Fusion Nets Params : {}".format(fusion_net_params) )
                 logger.info("Total Model Parameters : {}".format(full_params) )
+                total_trainable_params = sum(p.numel() for p in training_bench.parameters() if p.requires_grad)
+                total_params = sum(p.numel() for p in training_bench.parameters())
+                print('Total Parameters: {:,} \nTotal Trainable: {:,}\n'.format(total_params, total_trainable_params))
                 print("*"*50)
 
                 genotype = training_bench.model.genotype()
@@ -231,6 +243,7 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
                 # best_test_model_sd = copy.deepcopy(model.state_dict())
                 best_genotype = copy.deepcopy(genotype)
                 best_epoch = epoch
+                best_model = copy.deepcopy(model)
 
                 if parallel:
                     save(model, os.path.join(args.save, 'best', 'best_model.pt'))
@@ -270,8 +283,8 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
     else:
 
-        best_test_model.eval()
-        bench = DetBenchPredictImagePair(best_test_model)
+        best_model.eval()
+        bench = DetBenchPredictImagePair(best_model)
         # bench = DetBenchTrainImagePair(model, create_labeler=True)
 
         bench.to(device)
@@ -313,15 +326,15 @@ def train_flira_track_acc(model, architect, optimizer, scheduler, dataloaders, d
 
 
         print("*"*50)
-        print("Mean Average Precision Obtained is : "+str(mean_ap))
+        print("Mean Average Precision (Test) Obtained is : "+str(mean_ap))
         print("*"*50)
         
         # for i in range(len(best_test_genotype)):
         #     logger.info(str(best_test_genotype[i]))
 
    
-        logger.info("Current best test accuracy: {}, at training epoch: {}".format(best_test_metric, best_test_epoch) )
-        return best_test_metric
+        logger.info("Current best dev accuracy: {}, at training epoch: {}".format(best_metric, best_epoch) )
+        return best_metric
         
 
 def test_ego_track_acc(model, dataloaders, datasets, genotype_list, 
