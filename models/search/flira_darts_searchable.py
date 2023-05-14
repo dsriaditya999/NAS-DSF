@@ -82,12 +82,12 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
     logger.info("Loading Head checkpoint: " + head_path)
 
     # optimizer and scheduler
-    optimizer = op.Adam(params, lr=args.eta_max/0.95, weight_decay=1e-4)
+    optimizer = op.Adam(params, lr=1e-3, weight_decay=1e-4)
     # optimizer = op.Adam(None, lr=args.eta_max, weight_decay=1e-4)
     # scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
     #                                           num_batches_per_epoch)
 
-    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
+    # scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     arch_optimizer = op.Adam(model.arch_parameters(),
             lr=args.arch_learning_rate, betas=(0.5, 0.999), weight_decay=args.arch_weight_decay)
@@ -102,7 +102,7 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
     plotter = Plotter(args)
 
     best_score, best_genotype = tr.train_flira_track_acc(model, architect,
-                                            optimizer, scheduler, dataloaders, datasets,
+                                            optimizer, dataloaders, datasets,
                                             dataset_sizes,
                                             device=device, 
                                             num_epochs=args.epochs, 

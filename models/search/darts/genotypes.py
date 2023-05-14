@@ -23,6 +23,15 @@ STEP_STEP_PRIMITIVES = [
 
 
 # STEP_STEP_PRIMITIVES = [
+#     'Sum',
+#     'ECA_CA',
+#     'Spatial_Att',
+#     'CBAM_CA',
+#     'ConcatConv'
+# ]
+
+
+# STEP_STEP_PRIMITIVES = [
 #     'sum',
 #     'scale_dot_attn',
 #     'cat_conv_glu',

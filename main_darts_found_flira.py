@@ -177,7 +177,7 @@ def get_data(args):
 
 def train_model(model, dataloaders, datasets, args, device, logger):
 
-    dataset_sizes = {x: len(dataloaders[x].dataset) for x in ['train', 'test']}
+    dataset_sizes = {x: len(dataloaders[x].dataset) for x in ['train', 'dev', 'test']}
     num_batches_per_epoch = dataset_sizes['train'] / args.batchsize
 
     if torch.cuda.device_count() > 1 and args.parallel:
@@ -200,12 +200,12 @@ def train_model(model, dataloaders, datasets, args, device, logger):
     logger.info("Loading Head checkpoint: " + head_path)
 
     # optimizer and scheduler
-    optimizer = op.Adam(params, lr=args.eta_max/0.95, weight_decay=1e-4)
+    optimizer = op.Adam(params, lr=1e-3, weight_decay=1e-4)
 
     # scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
     #                                           num_batches_per_epoch)
 
-    scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
+    # scheduler = lr_sc.ExponentialLR(optimizer, gamma=0.95)
 
     # hardware tuning
     if torch.cuda.device_count() > 1 and args.parallel:
@@ -217,7 +217,7 @@ def train_model(model, dataloaders, datasets, args, device, logger):
     # status 
     status = 'eval'
     test_metric = tr.train_flira_track_acc(model, None, optimizer, 
-                                            scheduler, dataloaders, datasets, dataset_sizes,
+                                            dataloaders, datasets, dataset_sizes,
                                             device, args.epochs,
                                             args.parallel, logger, plotter, args,
                                             status)

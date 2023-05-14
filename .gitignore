@@ -17,3 +17,7 @@ data/.smbdeleteAAAd54d372462d0e9da
 data/._dataset_config.py
 EXP_CBAM/*
 EXP_MOD/*
+.ipynb_checkpoints/*
+FINAL_EXP_MOD_NAS/*
+Untitled.ipynb
+FINAL_EXP_NAS/*
