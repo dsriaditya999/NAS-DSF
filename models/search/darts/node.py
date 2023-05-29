@@ -23,13 +23,13 @@ class Found_NodeCell(nn.Module):
         inner_steps = step_genotype.inner_steps
         self.compile(op_names, indices, inner_steps)
 
-        if self.node_multiplier != 1:
-            self.out_conv = nn.Conv2d(self.C * self.node_multiplier, self.C, kernel_size=1)
-            self.bn = nn.BatchNorm2d(self.C)
-            self.out_dropout = nn.Dropout(args.drpt)
+        # if self.node_multiplier != 1:
+        #     self.out_conv = nn.Conv2d(self.C * self.node_multiplier, self.C, kernel_size=1)
+        #     self.bn = nn.BatchNorm2d(self.C)
+        #     self.out_dropout = nn.Dropout(args.drpt)
 
         # skip v3 and v4
-        self.bn2 = nn.BatchNorm2d(self.C)
+        # self.bn2 = nn.BatchNorm2d(self.C)
         # self.dropout = nn.Dropout(args.drpt)
 
     def compile(self, edge_op_names, edge_indices, inner_steps):
@@ -63,15 +63,15 @@ class Found_NodeCell(nn.Module):
         # inner output step is cat_conv_relu
         out = torch.cat(states[-self.node_multiplier:], dim=1)
     
-        if self.node_multiplier != 1:
-            out = self.out_conv(out)
-            out = self.bn(out)
-            out = F.relu(out)
-            out = self.out_dropout(out)
-        # # skip v4
+        # if self.node_multiplier != 1:
+        #     out = self.out_conv(out)
+        #     out = self.bn(out)
+        #     out = F.relu(out)
+        #     out = self.out_dropout(out)
+        # # # skip v4
         
-        out += x
-        out = self.bn2(out)
+        # out += x
+        # out = self.bn2(out)
         
         return out
 

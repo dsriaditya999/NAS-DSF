@@ -23,7 +23,7 @@ class FusionCell(nn.Module):
         self._step_nodes = nn.ModuleList()
         self.num_input_nodes = args.num_input_nodes
         self.C = args.C
-        self.conv1x1 = nn.Conv2d(self.C*self._multiplier,self.C, kernel_size=1)
+        # self.conv1x1 = nn.Conv2d(self.C*self._multiplier,self.C, kernel_size=1)
 
         # input features is a joint list of visual_features and thermal_features
         for i in range(self._steps):
@@ -60,7 +60,7 @@ class FusionCell(nn.Module):
             states.append(s)
 
         out = torch.cat(states[-self._multiplier:], dim=1)
-        out = self.conv1x1(out)
+        # out = self.conv1x1(out)
 
         return out
 

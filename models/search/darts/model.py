@@ -27,7 +27,7 @@ class Found_FusionCell(nn.Module):
         self._compile(self.C, op_names, indices, concat, step_nodes, args)
         self._steps = steps
         # self.bn = nn.BatchNorm1d(self.C * self._multiplier)
-        self.conv1x1 = nn.Conv2d(self.C*self._multiplier,self.C, kernel_size=1)
+        # self.conv1x1 = nn.Conv2d(self.C*self._multiplier,self.C, kernel_size=1)
 
 
     def _compile(self, C, op_names, indices, concat, gene_step_nodes, args):
@@ -79,7 +79,7 @@ class Found_FusionCell(nn.Module):
             states += [s]
         
         out = torch.cat(states[-self._multiplier:], dim=1)
-        out = self.conv1x1(out)
+        # out = self.conv1x1(out)
 
         return out
 

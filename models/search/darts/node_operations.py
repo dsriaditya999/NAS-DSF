@@ -49,14 +49,14 @@ class CBAM(nn.Module):
         )
         self.combine = nn.Conv2d(channel, int(channel/2), kernel_size=1)
         self.assemble = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
     def forward(self, x,y):
         comb_in = torch.cat((x, y), dim=1)
 
         out = self._forward_se(comb_in)
         out = self._forward_spatial(out)
-        out = self.relu(out)
+        # out = self.relu(out)
 
         return out
 
@@ -219,7 +219,7 @@ class ECAAttn(nn.Module):
         #                              nn.BatchNorm2d(int(C)),
         #                              nn.ReLU())
 
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
     def forward(self,x,y):
 
@@ -228,9 +228,9 @@ class ECAAttn(nn.Module):
         x_out = self.channel_attention_block(comb_in)
         x_out_1 = self.spatial_attention_block(x_out)
         # x_out_2 = self.out_conv(x_out_1)
-        x_out_2 = self.relu(x_out_1)
+        # x_out_2 = self.relu(x_out_1)
 
-        return x_out_2
+        return x_out_1
 
 #######################################################################################################
 ################################### ShuffleAttn Block #################################################
@@ -311,9 +311,9 @@ class ShuffleAttn(nn.Module):
 
         # Activation
 
-        out2 = self.relu(out)
+        # out2 = self.relu(out)
 
-        return out2
+        return out
     
 
 class ConcatConv(nn.Module):
@@ -322,7 +322,7 @@ class ConcatConv(nn.Module):
         # 1x1 conv1d
         self.conv = nn.Conv2d(2*C, C, kernel_size=1)
         # self.bn = nn.BatchNorm2d(C)
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
         # self.out_conv = nn.Sequential(nn.Conv2d(C, C, kernel_size=1),
         #                              nn.BatchNorm2d(C),
@@ -336,11 +336,11 @@ class ConcatConv(nn.Module):
         # Activation
         # out = self.bn(out)
 
-        out2 = self.relu(out)
+        # out2 = self.relu(out)
 
         # out2 = self.out_conv(out2)
         
-        return out2
+        return out
     
 
 
