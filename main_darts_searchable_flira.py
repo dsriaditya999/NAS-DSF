@@ -22,12 +22,30 @@ def parse_args():
     parser.add_argument('--checkpointdir', type=str, help='pretrained checkpoints and annotations dir',
                         default='checkpoints/flira')
     #parser.add_argument('--annotation', default='egogestureall_but_None.json', type=str, help='Annotation file path')
-    parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
-                        default='Att_Fusion_Net_Pretrained_Best.pth.tar')
-    parser.add_argument('--head_path', type=str, help='Head model pth path',
-                        default='Head_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
+    #                     default='Att_Fusion_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--head_path', type=str, help='Head model pth path',
+    #                     default='Head_Net_Pretrained_Best.pth.tar')
     # parser.add_argument('--depth_cp', type=str, help='depth video model pth path',
     #                     default='egogesture_resnext_1.0x_Depth_32_acc_93.61060.pth')
+    parser.add_argument('--init-fusion-head-weights', type=str, default=None, choices=['thermal', 'rgb', None])
+    parser.add_argument('--thermal-checkpoint-path', type=str)
+    parser.add_argument('--rgb-checkpoint-path', type=str, default=None)
+
+    parser.add_argument('--rgb_mean', type=float, nargs='+', default=None, metavar='MEAN',
+                        help='Override mean pixel value of RGB dataset')
+    parser.add_argument('--rgb_std', type=float,  nargs='+', default=None, metavar='STD',
+                        help='Override std deviation of of RGB dataset')
+    parser.add_argument('--thermal_mean', type=float, nargs='+', default=None, metavar='MEAN',
+                        help='Override mean pixel value of Thermal dataset')
+    parser.add_argument('--thermal_std', type=float,  nargs='+', default=None, metavar='STD',
+                        help='Override std deviation of of Thermal dataset')
+    parser.add_argument('--interpolation', default='bilinear', type=str, metavar='NAME',
+                        help='Image resize interpolation type (overrides model)')
+    parser.add_argument('--fill-color', default=None, type=str, metavar='NAME',
+                        help='Image augmentation fill (background) color ("mean" or int)')
+
+
     
     # dataset and data parallel
     parser.add_argument('root', metavar='DIR',
@@ -62,7 +80,7 @@ def parse_args():
     parser.add_argument('--multiplier', type=int, help='cell output concat', default=2)
     parser.add_argument('--steps', type=int, help='cell steps', default=2)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
-    parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
+    parser.add_argument('--node_steps', type=int, help='inner node steps', default=3)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
 
     # number of classes    
@@ -80,6 +98,8 @@ def parse_args():
     parser.add_argument('--eta_min', type=float, help='for cosine annealing scheduler, max learning rate', default=0.000001)
     parser.add_argument('--Ti', type=int, help='for cosine annealing scheduler, epochs Ti', default=5)
     parser.add_argument('--Tm', type=int, help='for cosine annealing scheduler, epochs multiplier Tm', default=2)
+    parser.add_argument('--output', default='', type=str, metavar='PATH',
+                        help='path to output folder (default: none, current dir)')
 
     # wandb
     parser.add_argument('--wandb', action='store_true', help='use wandb for logging and visualization')
@@ -99,8 +119,10 @@ if __name__ == "__main__":
 
     torch.cuda.manual_seed(args.seed)
 
-    args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
-    args.save = os.path.join('FINAL_EXP_NAS/flira', args.save)
+    args.save = 'search_'+args.dataset.upper()+'_'+args.save
+    args.save = os.path.join('EXP_NAS_M3FD', args.save)
+    output_base = args.output if args.output else './Output'
+    args.save = os.path.join(output_base, args.save)
     utils.create_exp_dir(args.save, scripts_to_save=None)
 
     log_format = '%(asctime)s %(message)s'
@@ -121,7 +143,7 @@ if __name__ == "__main__":
     flira_searcher = S.FlirA_Searcher(args, device, logger)
 
     # search
-    logger.info("NAS-DSF for FLIR-Aligned Started.")
+    logger.info("NAS-DSF for "+args.dataset.upper()+" search start.")
     start_time = time.time()
     best_score, best_genotype = flira_searcher.search()
     time_elapsed = time.time() - start_time

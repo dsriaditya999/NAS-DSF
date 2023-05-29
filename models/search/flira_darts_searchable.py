@@ -69,17 +69,17 @@ def train_darts_model(dataloaders, datasets, args, device, logger):
 
     # loading pretrained weights
 
-    full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
+    # full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
 
-    model.full_backbone.load_state_dict(torch.load(full_bb_path))
+    # model.full_backbone.load_state_dict(torch.load(full_bb_path))
 
-    logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
+    # logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
 
-    head_path = os.path.join(args.checkpointdir, args.head_path)
+    # head_path = os.path.join(args.checkpointdir, args.head_path)
 
-    model.head_net.load_state_dict(torch.load(head_path))
+    # model.head_net.load_state_dict(torch.load(head_path))
 
-    logger.info("Loading Head checkpoint: " + head_path)
+    # logger.info("Loading Head checkpoint: " + head_path)
 
     # optimizer and scheduler
     optimizer = op.Adam(params, lr=1e-3, weight_decay=1e-4)
@@ -121,7 +121,7 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         super().__init__()
 
-        self.full_backbone = Att_Fusion_Net(args.num_classes)
+        self.full_backbone = Att_Fusion_Net(args)
 
         self.multiplier = args.multiplier
         self.steps = args.steps
@@ -143,7 +143,7 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
             self.fusion_nets[i] = self.fusion_nets[i].to(device)
 
-        self.head_net = NAS_Head_Net(args.num_classes)
+        self.head_net = NAS_Head_Net(args)
         self.head_net =self.head_net.to(device)
 
 
@@ -188,11 +188,7 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         return central_parameters
 
-    
-    def _loss(self, input_features, labels):
-        # logits = self(input_features)
-        # return self._criterion(logits, labels) 
-        pass
+
 
     def arch_parameters(self):
 
@@ -215,7 +211,7 @@ class Found_Att_Fusion_Net(nn.Module):
 
         self._genotype_list = genotype_list
 
-        self.full_backbone = Att_Fusion_Net(args.num_classes)
+        self.full_backbone = Att_Fusion_Net(args)
 
         self.multiplier = args.multiplier
         self.steps = args.steps
@@ -238,7 +234,7 @@ class Found_Att_Fusion_Net(nn.Module):
 
             self.fusion_nets[i] = self.fusion_nets[i].to(device)
 
-        self.head_net = NAS_Head_Net(args.num_classes)
+        self.head_net = NAS_Head_Net(args)
         self.head_net =self.head_net.to(device)
         
 
@@ -285,10 +281,7 @@ class Found_Att_Fusion_Net(nn.Module):
         return central_parameters
 
     
-    def _loss(self, input_features, labels):
-        # logits = self(input_features)
-        # return self._criterion(logits, labels) 
-        pass
+
 
     def arch_parameters(self):
 
@@ -913,26 +906,85 @@ def get_feature_info(backbone):
 
 class Att_Fusion_Net(nn.Module):
 
-    def __init__(self,num_classes):
+    def __init__(self, args):
         super(Att_Fusion_Net, self).__init__()
 
         self.config = effdet.config.model_config.get_efficientdet_config('efficientdetv2_dt')
-        self.config.num_classes = num_classes
+        self.config.num_classes = args.num_classes
 
         thermal_det = EfficientDet(self.config)
         rgb_det = EfficientDet(self.config)
 
+        if args.thermal_checkpoint_path:
+            effdet.helpers.load_checkpoint(thermal_det, args.thermal_checkpoint_path)
+            print('Loading Thermal from {}'.format(args.thermal_checkpoint_path))
+        else:
+            # raise ValueError('Thermal checkpoint path not provided.')
+            print('Thermal checkpoint path not provided.')
+        
+        if args.rgb_checkpoint_path:
+            effdet.helpers.load_checkpoint(rgb_det, args.rgb_checkpoint_path)
+            print('Loading RGB from {}'.format(args.rgb_checkpoint_path))
+        else:
+            # raise ValueError('RGB checkpoint path not provided.')
+            print('RGB checkpoint path not provided.')
+
         self.thermal_backbone = thermal_det.backbone
-        thermal_feature_info = get_feature_info(self.thermal_backbone)
-        self.thermal_fpn = NAS_BiFpn(self.config,thermal_feature_info)
-
-
         self.rgb_backbone = rgb_det.backbone
+
+        thermal_feature_info = get_feature_info(self.thermal_backbone)
+        fpn = NAS_BiFpn(self.config,thermal_feature_info)
+
+        if args.thermal_checkpoint_path:
+
+            checkpoint = torch.load(args.thermal_checkpoint_path)
+            checkpoint2 = deepcopy(checkpoint)
+
+            for k,v in checkpoint2['state_dict'].items():
+                if "fpn" in k:
+                    k1 = k.replace("fpn.","")
+                    checkpoint['state_dict'][k1] = v
+                    del checkpoint['state_dict'][k]
+
+
+            missing,_ = fpn.load_state_dict(checkpoint['state_dict'], strict=False)
+
+
+            if len(missing) != 0:
+                raise ValueError('Missing keys in thermal backbone checkpoint for Thermal FPN')
+            
+            print('Loading Thermal FPN from {}'.format(args.thermal_checkpoint_path))
+
+        self.thermal_fpn = fpn
+
+        
         rgb_feature_info = get_feature_info(self.rgb_backbone)
-        self.rgb_fpn = NAS_BiFpn(self.config,rgb_feature_info)
+        fpn = NAS_BiFpn(self.config,rgb_feature_info)
+
+        if args.rgb_checkpoint_path:
+
+            checkpoint = torch.load(args.rgb_checkpoint_path)
+            checkpoint2 = deepcopy(checkpoint)
+
+            for k,v in checkpoint2['state_dict'].items():
+                if "fpn" in k:
+                    k1 = k.replace("fpn.","")
+                    checkpoint['state_dict'][k1] = v
+                    del checkpoint['state_dict'][k]
 
 
-    def forward(self, data_pair, branch='fusion'):
+            missing,_ = fpn.load_state_dict(checkpoint['state_dict'], strict=False)
+
+
+            if len(missing) != 0:
+                raise ValueError('Missing keys in rgb backbone checkpoint for RGB FPN')
+            
+            print('Loading RGB FPN from {}'.format(args.rgb_checkpoint_path))
+
+        self.rgb_fpn = fpn
+
+
+    def forward(self, data_pair):
         thermal_x, rgb_x = data_pair[0], data_pair[1]
         
         thermal_x, rgb_x = self.thermal_backbone(thermal_x), self.rgb_backbone(rgb_x)
@@ -948,13 +1000,25 @@ class Att_Fusion_Net(nn.Module):
 
 class NAS_Head_Net(nn.Module):
 
-    def __init__(self,num_classes):
+    def __init__(self,args):
         super(NAS_Head_Net, self).__init__()
 
         self.config = effdet.config.model_config.get_efficientdet_config('efficientdetv2_dt')
-        self.config.num_classes = num_classes
+        self.config.num_classes = args.num_classes
 
         fusion_det = EfficientDet(self.config)
+
+        if args.init_fusion_head_weights == 'thermal':
+            effdet.helpers.load_checkpoint(fusion_det, args.thermal_checkpoint_path) # This is optional
+            print("Loading fusion head from thermal checkpoint.")
+        elif args.init_fusion_head_weights == 'rgb':
+            effdet.helpers.load_checkpoint(fusion_det, args.rgb_checkpoint_path)
+            print("Loading fusion head from rgb checkpoint.")
+        else:
+            # raise ValueError('Fusion head random init.')
+            print('Fusion head random init.')
+
+
         self.fusion_class_net = fusion_det.class_net
         self.fusion_box_net = fusion_det.box_net
 

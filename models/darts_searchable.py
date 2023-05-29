@@ -7,8 +7,7 @@ import torchvision.transforms as transforms
 from torch.utils.data.dataset import Subset
 from IPython import embed
 import effdet
-from effdet.data import resolve_input_config
-from data import create_dataset, create_loader
+from data import create_dataset, create_loader, resolve_input_config
 
 
 # FLIR-Aligned
@@ -42,8 +41,10 @@ class FlirA_Searcher():
             use_prefetcher=args.prefetcher,
             interpolation=input_config['interpolation'],
             fill_color=input_config['fill_color'],
-            mean=(0.519, 0.519, 0.519),
-            std=(0.225, 0.225, 0.225),
+            rgb_mean=input_config['rgb_mean'],
+            rgb_std=input_config['rgb_std'],
+            thermal_mean=input_config['thermal_mean'],
+            thermal_std=input_config['thermal_std'],
             num_workers=args.workers,
             pin_mem=args.pin_mem,
             is_training=True
@@ -56,8 +57,10 @@ class FlirA_Searcher():
             use_prefetcher=args.prefetcher,
             interpolation=input_config['interpolation'],
             fill_color=input_config['fill_color'],
-            mean=(0.519, 0.519, 0.519),
-            std=(0.225, 0.225, 0.225),
+            rgb_mean=input_config['rgb_mean'],
+            rgb_std=input_config['rgb_std'],
+            thermal_mean=input_config['thermal_mean'],
+            thermal_std=input_config['thermal_std'],
             num_workers=args.workers,
             pin_mem=args.pin_mem)
 
@@ -68,8 +71,10 @@ class FlirA_Searcher():
             use_prefetcher=args.prefetcher,
             interpolation=input_config['interpolation'],
             fill_color=input_config['fill_color'],
-            mean=(0.519, 0.519, 0.519),
-            std=(0.225, 0.225, 0.225),
+            rgb_mean=input_config['rgb_mean'],
+            rgb_std=input_config['rgb_std'],
+            thermal_mean=input_config['thermal_mean'],
+            thermal_std=input_config['thermal_std'],
             num_workers=args.workers,
             pin_mem=args.pin_mem)
 

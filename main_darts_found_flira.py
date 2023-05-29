@@ -25,8 +25,7 @@ from models.utils import parse_opts
 from IPython import embed
 
 import effdet
-from effdet.data import resolve_input_config
-from data import create_dataset, create_loader
+from data import create_dataset, create_loader, resolve_input_config
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Modality optimization.')
@@ -42,10 +41,12 @@ def parse_args():
     parser.add_argument('--checkpointdir', type=str, help='pretrained checkpoints and annotations dir',
                         default='checkpoints/flira')
     #parser.add_argument('--annotation', default='egogestureall_but_None.json', type=str, help='Annotation file path')
-    parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
-                        default='Att_Fusion_Net_Pretrained_Best.pth.tar')
-    parser.add_argument('--head_path', type=str, help='Head model pth path',
-                        default='Head_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--fullbb_path', type=str, help='Full Backbone model pth path',
+    #                     default='Att_Fusion_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--head_path', type=str, help='Head model pth path',
+    #                     default='Head_Net_Pretrained_Best.pth.tar')
+    # parser.add_argument('--fusion_pretrain_path', type=str, help='Pretrained Fusion pth path',
+    #                     default='temp.pth.tar')
     # parser.add_argument('--depth_cp', type=str, help='depth video model pth path',
     #                     default='egogesture_resnext_1.0x_Depth_32_acc_93.61060.pth')
     
@@ -70,6 +71,19 @@ def parse_args():
                         help='disable fast prefetcher')
     parser.add_argument('--pin-mem', action='store_true', default=False,
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
+    
+    parser.add_argument('--rgb_mean', type=float, nargs='+', default=None, metavar='MEAN',
+                        help='Override mean pixel value of RGB dataset')
+    parser.add_argument('--rgb_std', type=float,  nargs='+', default=None, metavar='STD',
+                        help='Override std deviation of of RGB dataset')
+    parser.add_argument('--thermal_mean', type=float, nargs='+', default=None, metavar='MEAN',
+                        help='Override mean pixel value of Thermal dataset')
+    parser.add_argument('--thermal_std', type=float,  nargs='+', default=None, metavar='STD',
+                        help='Override std deviation of of Thermal dataset')
+    parser.add_argument('--interpolation', default='bilinear', type=str, metavar='NAME',
+                        help='Image resize interpolation type (overrides model)')
+    parser.add_argument('--fill-color', default=None, type=str, metavar='NAME',
+                        help='Image augmentation fill (background) color ("mean" or int)')
     
     # basic learning settings
     parser.add_argument('--batchsize', type=int, help='batch size', default=16)
@@ -129,8 +143,10 @@ def get_data(args):
         use_prefetcher=args.prefetcher,
         interpolation=input_config['interpolation'],
         fill_color=input_config['fill_color'],
-        mean=(0.519, 0.519, 0.519),
-        std=(0.225, 0.225, 0.225),
+        rgb_mean=input_config['rgb_mean'],
+        rgb_std=input_config['rgb_std'],
+        thermal_mean=input_config['thermal_mean'],
+        thermal_std=input_config['thermal_std'],
         num_workers=args.workers,
         pin_mem=args.pin_mem,
         is_training=True)
@@ -142,8 +158,10 @@ def get_data(args):
         use_prefetcher=args.prefetcher,
         interpolation=input_config['interpolation'],
         fill_color=input_config['fill_color'],
-        mean=(0.519, 0.519, 0.519),
-        std=(0.225, 0.225, 0.225),
+        rgb_mean=input_config['rgb_mean'],
+        rgb_std=input_config['rgb_std'],
+        thermal_mean=input_config['thermal_mean'],
+        thermal_std=input_config['thermal_std'],
         num_workers=args.workers,
         pin_mem=args.pin_mem)
 
@@ -154,8 +172,10 @@ def get_data(args):
         use_prefetcher=args.prefetcher,
         interpolation=input_config['interpolation'],
         fill_color=input_config['fill_color'],
-        mean=(0.519, 0.519, 0.519),
-        std=(0.225, 0.225, 0.225),
+        rgb_mean=input_config['rgb_mean'],
+        rgb_std=input_config['rgb_std'],
+        thermal_mean=input_config['thermal_mean'],
+        thermal_std=input_config['thermal_std'],
         num_workers=args.workers,
         pin_mem=args.pin_mem)
 
@@ -187,20 +207,36 @@ def train_model(model, dataloaders, datasets, args, device, logger):
 
     # loading pretrained weights
 
-    full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
+    # full_bb_path = os.path.join(args.checkpointdir, args.fullbb_path)
 
-    model.full_backbone.load_state_dict(torch.load(full_bb_path))
+    # model.full_backbone.load_state_dict(torch.load(full_bb_path))
 
-    logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
+    # logger.info("Loading Full Backbone checkpoint: " + full_bb_path)
 
-    head_path = os.path.join(args.checkpointdir, args.head_path)
+    # head_path = os.path.join(args.checkpointdir, args.head_path)
 
-    model.head_net.load_state_dict(torch.load(head_path))
+    # model.head_net.load_state_dict(torch.load(head_path))
 
-    logger.info("Loading Head checkpoint: " + head_path)
+    # logger.info("Loading Head checkpoint: " + head_path)
+
+    # Loading pretrained weights for fusion networks
+
+    # fusion_pretrain_path = os.path.join(args.checkpointdir, args.fusion_pretrain_path)
+
+    # checkpoint_dict = torch.load(fusion_pretrain_path)
+
+    # for i in range(args.fusion_levels):
+    #     temp_dict = model.fusion_nets[i].state_dict()
+    #     new_checkpoint_dict = {k: v for k, v in checkpoint_dict.items() if k in temp_dict}
+    #     temp_dict.update(new_checkpoint_dict)
+    #     model.fusion_nets[i].load_state_dict(temp_dict)
+
+    # logger.info("Loading Fusion Net checkpoint: " + fusion_pretrain_path)
 
     # optimizer and scheduler
     optimizer = op.Adam(params, lr=1e-3, weight_decay=1e-4)
+
+    # optimizer = op.SGD(params, lr=1e-4, weight_decay=1e-4)
 
     # scheduler = sc.LRCosineAnnealingScheduler(args.eta_max, args.eta_min, args.Ti, args.Tm,
     #                                           num_batches_per_epoch)
@@ -223,6 +259,13 @@ def train_model(model, dataloaders, datasets, args, device, logger):
                                             status)
 
     # logger.info('Final test acc: ' + str(val_acc) )
+
+    # logger.info("DSF-NAS (S=2)+HEADFREEZE Resuming Training")
+    # logger.info("DSF-NAS (S=2) Resuming Training")
+    # logger.info("DSF-NAS (S=2) SGD Optimizer")
+    # logger.info("DSF-NAS (S=2) Full Split Training")
+    # logger.info("DSF-NAS (S=2)+HEADFREEZE Full Split Training")
+
     return test_metric
 
 def test_model(model, dataloaders, datasets, args, device, 
@@ -269,11 +312,11 @@ if __name__ == "__main__":
         args.batchsize = batchsize
         args.epochs = epochs
         
-        args.save = 'test-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
+        args.save = 'test_'+args.dataset.upper()+'_'+args.save
         args.save = os.path.join(eval_exp_dir, args.save)
         
-        best_test_model_path = os.path.join(eval_exp_dir, 'best', 'best_test_model.pt')
-        best_genotype_path = os.path.join(eval_exp_dir, 'best', 'best_test_genotype.pkl')
+        best_test_model_path = os.path.join(eval_exp_dir, 'best', 'best_model.pt')
+        best_genotype_path = os.path.join(eval_exp_dir, 'best', 'best_genotype.pkl')
 
     elif args.search_exp_dir != None:
         best_genotype_path = os.path.join(args.search_exp_dir, 'best', 'best_genotype.pkl')
@@ -288,7 +331,7 @@ if __name__ == "__main__":
         args.batchsize = batchsize
         args.epochs = epochs
         
-        args.save = 'eval-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
+        args.save = 'eval_'+args.dataset.upper()+'_'+args.save
         args.save = os.path.join(search_exp_dir, args.save)
 
     args.no_bad_skel = True

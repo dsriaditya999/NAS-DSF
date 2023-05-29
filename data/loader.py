@@ -107,15 +107,20 @@ class PrefetchLoader:
 
     def __init__(self,
             loader,
-            mean=IMAGENET_DEFAULT_MEAN,
-            std=IMAGENET_DEFAULT_STD,
+            rgb_mean=IMAGENET_DEFAULT_MEAN,
+            rgb_std=IMAGENET_DEFAULT_STD,
+            thermal_mean=IMAGENET_DEFAULT_MEAN,
+            thermal_std=IMAGENET_DEFAULT_STD,
             re_prob=0.,
             re_mode='pixel',
             re_count=1,
             ):
         self.loader = loader
-        self.mean = torch.tensor([x * 255 for x in mean]).cuda().view(1, 3, 1, 1)
-        self.std = torch.tensor([x * 255 for x in std]).cuda().view(1, 3, 1, 1)
+        self.rgb_mean = torch.tensor([x * 255 for x in rgb_mean]).cuda().view(1, 3, 1, 1)
+        self.rgb_std = torch.tensor([x * 255 for x in rgb_std]).cuda().view(1, 3, 1, 1)
+        self.thermal_mean = torch.tensor([x * 255 for x in thermal_mean]).cuda().view(1, 3, 1, 1)
+        self.thermal_std = torch.tensor([x * 255 for x in thermal_std]).cuda().view(1, 3, 1, 1)
+
         if re_prob > 0.:
             self.random_erasing = RandomErasing(probability=re_prob, mode=re_mode, max_count=re_count)
         else:
@@ -128,9 +133,9 @@ class PrefetchLoader:
         for next_thermal_input, next_rgb_input, next_target in self.loader:
             with torch.cuda.stream(stream):
                 next_thermal_input = next_thermal_input.cuda(non_blocking=True)
-                next_thermal_input = next_thermal_input.float().sub_(self.mean).div_(self.std)
+                next_thermal_input = next_thermal_input.float().sub_(self.thermal_mean).div_(self.thermal_std)
                 next_rgb_input = next_rgb_input.cuda(non_blocking=True)
-                next_rgb_input = next_rgb_input.float().sub_(self.mean).div_(self.std)
+                next_rgb_input = next_rgb_input.float().sub_(self.rgb_mean).div_(self.rgb_std)
                 next_target = {k: v.cuda(non_blocking=True) for k, v in next_target.items()}
                 if self.random_erasing is not None:
                     next_thermal_input, next_rgb_input = self.random_erasing(next_thermal_input, next_rgb_input, next_target)
@@ -170,14 +175,16 @@ def create_loader(
         re_count=1,
         interpolation='bilinear',
         fill_color='mean',
-        mean=IMAGENET_DEFAULT_MEAN,
-        std=IMAGENET_DEFAULT_STD,
+        rgb_mean=IMAGENET_DEFAULT_MEAN,
+        rgb_std=IMAGENET_DEFAULT_STD,
+        thermal_mean=IMAGENET_DEFAULT_MEAN,
+        thermal_std=IMAGENET_DEFAULT_STD,
         num_workers=1,
         distributed=False,
         pin_mem=False,
         anchor_labeler=None,
         transform_fn=None,
-        collate_fn=None,
+        collate_fn=None
 ):
     if isinstance(input_size, tuple):
         img_size = input_size[-2:]
@@ -193,21 +200,26 @@ def create_loader(
         transform = transform_fn
     else:
         if is_training:
-            transform = transforms_flir_train(
+            transform = transforms_train(
                 img_size,
                 interpolation=interpolation,
                 use_prefetcher=use_prefetcher,
                 fill_color=fill_color,
-                mean=mean,
-                std=std)
+                rgb_mean=rgb_mean,
+                rgb_std=rgb_std,
+                thermal_mean=thermal_mean,
+                thermal_std=thermal_std)
         else:
-            transform = transforms_flir_eval(
+            transform = transforms_eval(
                 img_size,
                 interpolation=interpolation,
                 use_prefetcher=use_prefetcher,
                 fill_color=fill_color,
-                mean=mean,
-                std=std)
+                rgb_mean=rgb_mean,
+                rgb_std=rgb_std,
+                thermal_mean=thermal_mean,
+                thermal_std=thermal_std)
+            
     dataset.transform = transform
 
     sampler = None
@@ -231,8 +243,8 @@ def create_loader(
     )
     if use_prefetcher:
         if is_training:
-            loader = PrefetchLoader(loader, mean=mean, std=std, re_prob=re_prob, re_mode=re_mode, re_count=re_count)
+            loader = PrefetchLoader(loader, rgb_mean=rgb_mean, rgb_std=rgb_std, thermal_mean=thermal_mean, thermal_std=thermal_std, re_prob=re_prob, re_mode=re_mode, re_count=re_count)
         else:
-            loader = PrefetchLoader(loader, mean=mean, std=std)
+            loader = PrefetchLoader(loader, rgb_mean=rgb_mean, rgb_std=rgb_std, thermal_mean=thermal_mean, thermal_std=thermal_std)
 
     return loader

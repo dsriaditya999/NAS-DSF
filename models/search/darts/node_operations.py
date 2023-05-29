@@ -6,22 +6,22 @@ import math
 from .genotypes import *
 
 # all node operations has two input and one output, 2C -> C
-STEP_STEP_OPS = {
-    'Sum': lambda C: Sum(),
-    'ECAAttn': lambda C: ECAAttn(C),
-    'ShuffleAttn': lambda C: ShuffleAttn(C),
-    'CBAM': lambda C: CBAM(C),
-    'ConcatConv': lambda C: ConcatConv(C)
-}
-
-
 # STEP_STEP_OPS = {
 #     'Sum': lambda C: Sum(),
-#     'ECA_CA': lambda C: ECA_CA(C),
-#     'Spatial_Att': lambda C: Spatial_Attention(C),
-#     'CBAM_CA': lambda C: CBAM_CA(C),
+#     'ECAAttn': lambda C: ECAAttn(C),
+#     'ShuffleAttn': lambda C: ShuffleAttn(C),
+#     'CBAM': lambda C: CBAM(C),
 #     'ConcatConv': lambda C: ConcatConv(C)
 # }
+
+
+STEP_STEP_OPS = {
+    'Sum': lambda C: Sum(),
+    'ECA_CA': lambda C: ECA_CA(C),
+    'Spatial_Att': lambda C: Spatial_Attention(C),
+    'CBAM_CA': lambda C: CBAM_CA(C),
+    'ConcatConv': lambda C: ConcatConv(C)
+}
 
 class Sum(nn.Module):
     def __init__(self):
