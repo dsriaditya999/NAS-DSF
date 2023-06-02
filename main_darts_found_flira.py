@@ -49,6 +49,9 @@ def parse_args():
     #                     default='temp.pth.tar')
     # parser.add_argument('--depth_cp', type=str, help='depth video model pth path',
     #                     default='egogesture_resnext_1.0x_Depth_32_acc_93.61060.pth')
+    parser.add_argument('--init-fusion-head-weights', type=str, default=None, choices=['thermal', 'rgb', None])
+    parser.add_argument('--thermal-checkpoint-path', type=str)
+    parser.add_argument('--rgb-checkpoint-path', type=str, default=None)
     
     # dataset and data parallel
 
@@ -97,9 +100,9 @@ def parse_args():
     # for cells and steps and inner representation size
     parser.add_argument('--C', type=int, help='channels', default=128)
     parser.add_argument('--L', type=int, help='length after pool', default=8)
-    parser.add_argument('--multiplier', type=int, help='cell output concat', default=2)
-    parser.add_argument('--steps', type=int, help='cell steps', default=2)
-    parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=3)
+    parser.add_argument('--multiplier', type=int, help='cell output concat', default=1)
+    parser.add_argument('--steps', type=int, help='cell steps', default=1)
+    parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=1)
     parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
     
@@ -271,8 +274,8 @@ def train_model(model, dataloaders, datasets, args, device, logger):
 def test_model(model, dataloaders, datasets, args, device, 
                 logger, test_model_path, genotype):
     # criterion = torch.nn.CrossEntropyLoss()
-    model.load_state_dict(torch.load(test_model_path))
-    print("Weights Loaded!")
+    model.load_state_dict(torch.load(test_model_path), strict=False)
+    print("Checkpoint Weights Loaded!")
 
     model.eval()
     dataset_sizes = {x: len(dataloaders[x].dataset) for x in ['test']}
@@ -376,6 +379,11 @@ if __name__ == "__main__":
         model_acc = test_model(model, dataloaders, datasets, args, device, logger, best_test_model_path, genotype_list)
     else:
         model_acc = train_model(model, dataloaders, datasets, args, device, logger)
+
+    logger.info('Simple NAS (Full Attention)')
+    # logger.info('Simple NAS (Sub Attention)')
+    # logger.info('Simple NAS - No Feature Selection (Full Attention)')
+    # logger.info('Simple NAS - No Feature Selection (Sub Attention)')
 
     time_elapsed = time.time() - start_time
     logger.info("*" * 50)

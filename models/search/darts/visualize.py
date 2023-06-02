@@ -62,6 +62,7 @@ def plot(genotype, filename, args, task=None):
 
             if task == 'flira':
                 input_nodes_A = ["Thermal_1", "Thermal_2", "Thermal_3", "Thermal_4","Thermal_5"]
+                # input_nodes_A = ["Thermal"]
                 
             for input_node in input_nodes_A:
                 ca.node(input_node, fillcolor='lightskyblue1')
@@ -84,6 +85,7 @@ def plot(genotype, filename, args, task=None):
 
             if task == 'flira':
                 input_nodes_B = ["RGB_1", "RGB_2", "RGB_3", "RGB_4","RGB_5"]
+                # input_nodes_B = ["RGB"]
 
             for input_node in input_nodes_B:
                 cb.node(input_node, fillcolor='darkolivegreen1')

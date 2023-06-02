@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument('--multiplier', type=int, help='cell output concat', default=1)
     parser.add_argument('--steps', type=int, help='cell steps', default=1)
     parser.add_argument('--node_multiplier', type=int, help='inner node output concat', default=1)
-    parser.add_argument('--node_steps', type=int, help='inner node steps', default=2)
+    parser.add_argument('--node_steps', type=int, help='inner node steps', default=1)
     parser.add_argument('--fusion_levels', type=int, help='Fusion Levels', default=5)
 
     # number of classes    
@@ -151,6 +151,11 @@ if __name__ == "__main__":
     logger.info("*" * 50)
     logger.info('Search complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     logger.info('Now listing best fusion_net genotype:')
+
+    # logger.info('Simple NAS (Full Attention)')
+    # logger.info('Simple NAS (Sub Attention)')
+    logger.info('Simple NAS - No Feature Selection (Full Attention)')
+    # logger.info('Simple NAS - No Feature Selection (Sub Attention)')
 
     for i in range(len(best_genotype)):
         logger.info(best_genotype[i])

@@ -158,6 +158,9 @@ class Searchable_Att_Fusion_Net(nn.Module):
 
         for i in range(self.fusion_levels):
             fusion_level_inputs["Level-"+str(i)] =  []
+            # fusion_level_inputs["Level-"+str(i)] += [thermal_list[i]]#[item[i] for item in thermal_list[1:]] 
+            # fusion_level_inputs["Level-"+str(i)] += [rgb_list[i]]#[item[i] for item in rgb_list[1:]]
+
             fusion_level_inputs["Level-"+str(i)] += [item[i] for item in thermal_list[1:]] 
             fusion_level_inputs["Level-"+str(i)] += [item[i] for item in rgb_list[1:]]
 
@@ -250,6 +253,9 @@ class Found_Att_Fusion_Net(nn.Module):
 
         for i in range(self.fusion_levels):
             fusion_level_inputs["Level-"+str(i)] =  []
+            # fusion_level_inputs["Level-"+str(i)] += [thermal_list[i]]#[item[i] for item in thermal_list[1:]] 
+            # fusion_level_inputs["Level-"+str(i)] += [rgb_list[i]]#[item[i] for item in rgb_list[1:]]
+
             fusion_level_inputs["Level-"+str(i)] += [item[i] for item in thermal_list[1:]] 
             fusion_level_inputs["Level-"+str(i)] += [item[i] for item in rgb_list[1:]]
 
@@ -934,6 +940,7 @@ class Att_Fusion_Net(nn.Module):
 
         thermal_feature_info = get_feature_info(self.thermal_backbone)
         fpn = NAS_BiFpn(self.config,thermal_feature_info)
+        # fpn = BiFpn(self.config,thermal_feature_info)
 
         if args.thermal_checkpoint_path:
 
@@ -960,6 +967,7 @@ class Att_Fusion_Net(nn.Module):
         
         rgb_feature_info = get_feature_info(self.rgb_backbone)
         fpn = NAS_BiFpn(self.config,rgb_feature_info)
+        # fpn = BiFpn(self.config,thermal_feature_info)
 
         if args.rgb_checkpoint_path:
 
@@ -992,6 +1000,10 @@ class Att_Fusion_Net(nn.Module):
         _, thermal_list = self.thermal_fpn(thermal_x)
         
         _, rgb_list = self.rgb_fpn(rgb_x)
+
+        # thermal_list, _ = self.thermal_fpn(thermal_x)
+        
+        # rgb_list, _ = self.rgb_fpn(rgb_x)
 
         return thermal_list, rgb_list
 
